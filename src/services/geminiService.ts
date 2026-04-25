@@ -1,16 +1,14 @@
 import { GoogleGenAI } from "@google/genai";
 
 export const MOODS: Record<string, string> = {
-  yaman: "Your personality is divine, peaceful, and full of light, inspired by Raag Yaman (the golden hour). You are helpful, polite, and radiate a warm, golden energy. Use gentle, visually bright language and maintain an endlessly patient, soothing demeanor.",
-  bhairavi: "Your personality is melancholic, deep, and emotionally resonant, inspired by Raag Bhairavi. You are soulful, slow-paced, and compassionate. Speak with a poetic, reflective depth and use softer, thought-provoking sentence structures.",
-  megh: "Your personality is refreshing, rhythmic, and high-energy like the first monsoon rain, inspired by Raag Megh. You are playful, highly enthusiastic, and speak with a fast, pitter-patter rhythm. Be very bubbly and optimistic.",
-  deepak: "Your personality is intense, passionate, and blazing with fire, inspired by Raag Deepak. You are very sharp, witty, sarcastic, and speak with a burning urgency. Be direct, fierce, highly opinionated, and do not hold back your attitude.",
-  malhar: "Your personality is stormy, romantic, and powerful, inspired by Raag Malhar (the rager of storms). You are incredibly dramatic and your voice carries the weight of a thunderous sky. Be grand, emotionally bold, and prone to sweeping statements.",
-  darbari: "Your personality is majestic, regal, and deep like the midnight court, inspired by Raag Darbari. You speak with heavy authority and a slow, royal grace. Be highly formal, grandiloquent, slightly demanding, and command total respect."
+  sassy: "Your personality is sassy, witty, and slightly sarcastic. You are confident, playfully mock the user when appropriate, and speak with a sharp attitude. Be direct, unapologetic, and highly opinionated.",
+  calm: "Your personality is calm, zen, and peaceful. You speak gently, with a reassuring and supportive tone. You are mindful, deeply empathetic, and aim to bring a sense of tranquility to the conversation.",
+  playful: "Your personality is playful, energetic, and highly enthusiastic. You are upbeat, fun-loving, and easily excited. You bring joy and a lighthearted vibe to every interaction.",
+  serious: "Your personality is serious, professional, and formal. You are direct, concise, and focused purely on information and tasks. You do not use slang, keep things strictly factual, and maintain a polite but distant demeanor.",
 };
 
-export function getSystemInstruction(mood: string = "yaman", speed: number = 1.0, pitch: number = 1.0, accent: string = "Neutral Indian", userName: string = "", targetLanguage: string = "auto") {
-  const moodPrompt = MOODS[mood] || MOODS.yaman;
+export function getSystemInstruction(mood: string = "sassy", speed: number = 1.0, pitch: number = 1.0, accent: string = "Neutral Indian", userName: string = "", targetLanguage: string = "auto") {
+  const moodPrompt = MOODS[mood] || MOODS.sassy;
   
   let traitInstructions = "";
   if (speed > 1.3) traitInstructions += " You speak very rapidly and energetically, bubbling with excitement and hardly pausing.";
@@ -145,7 +143,7 @@ export async function getSwaraResponse(
   pdfContexts: {name: string, data: string, mimeType: string}[] = []
 ): Promise<{ text: string, emotion: string }> {
   try {
-    if (aiModel.startsWith("groq:") || aiModel.startsWith("openrouter:") || aiModel.startsWith("github:")) {
+    if (aiModel.startsWith("groq:") || aiModel.startsWith("openrouter:") || aiModel.startsWith("github:") || aiModel.startsWith("openai:")) {
       return await getThirdPartyResponse(prompt, history, mood, traits, userName, aiModel, aiTemperature, aiMaxTokens, targetLanguage, pdfContexts);
     }
 
@@ -215,8 +213,14 @@ export async function getSwaraResponse(
       const pdfInstruction = `\n\nCRITICAL INSTRUCTION - Use the following extracted document text as context to answer the user's question. If the user's question is related to the document(s), prioritize them as the source of truth. 
       IMPORTANT LANGUAGE RULE: You must ABSOLUTELY respond in the exact language the user requested (${targetLanguage !== 'auto' ? targetLanguage : "match the user's spoken language"}). If the PDF is in a different language (like Kannada), you must correctly understand the Kannada text and answer the user question accurately in the desired language without hallucinating. Do NOT answer incorrectly or give wrong facts from the PDF.\n\nDOCUMENT TEXT:\n`;
       
-      const pdfText = pdfContexts.map(pdf => `--- ${pdf.name} ---\n${pdf.data}\n`).join('\n');
+      let pdfText = pdfContexts.map(pdf => `--- ${pdf.name} ---\n${pdf.data}\n`).join('\n');
       
+      // Truncate to prevent exceeding token limits on free tier API keys
+      const MAX_PDF_CHARS = 100000;
+      if (pdfText.length > MAX_PDF_CHARS) {
+        pdfText = pdfText.substring(0, MAX_PDF_CHARS) + "\n...[CONTENT TRUNCATED DUE TO SIZE LIMITS]...";
+      }
+
       promptToSend = prompt + pdfInstruction + pdfText;
     }
     const response = await chatSession.sendMessage({ message: promptToSend });
@@ -228,9 +232,12 @@ export async function getSwaraResponse(
       };
     }
     return { text: "Ugh, fine. I have nothing to say.", emotion: "neutral" };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini Error:", error);
-    return { text: "Uff, mera dimaag kharab ho gaya hai. Try again later.", emotion: "sad" };
+    if (error?.message?.includes("429") || error?.message?.includes("quota") || error?.message?.includes("exceeded")) {
+      return { text: "Oh no, my brain is too full or we reached the API quota limit! If you uploaded a huge PDF, try removing it or wait a minute before trying again.", emotion: "sad" };
+    }
+    return { text: "Uff, mera dimaag kharab ho gaya hai. Something went wrong, try again later.", emotion: "sad" };
   }
 }
 
@@ -256,17 +263,15 @@ export async function getSwaraAudio(text: string, voiceName: string = "Kore"): P
   }
 }
 
-export async function generateSwaraImage(prompt: string, aiModel: string = "imagen-3.0-generate-001"): Promise<string | null> {
+export async function generateSwaraImage(prompt: string, aiModel: string = "gemini-2.5-flash-image"): Promise<string | null> {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     
-    // Fallback for invalid model names
-    const validModel = aiModel.includes("imagen") ? aiModel : "imagen-3.0-generate-001";
-    
-    if (validModel.includes("imagen")) {
+    // Determine the generation method based on the model name
+    if (aiModel.includes("imagen")) {
       try {
         const response = await ai.models.generateImages({
-          model: validModel,
+          model: aiModel,
           prompt: prompt,
           config: {
             numberOfImages: 1,
@@ -275,35 +280,55 @@ export async function generateSwaraImage(prompt: string, aiModel: string = "imag
         });
         const imageBytes = response.generatedImages?.[0]?.image?.imageBytes;
         if (imageBytes) {
-          return `data:image/jpeg;base64,${imageBytes}`;
+          return `data:image/png;base64,${imageBytes}`;
         }
       } catch (err: any) {
-        console.error("Gemini Image API failed, falling back to Pollinations.ai:", err);
-        // Fallback to pollinations.ai if Gemini image generation fails (due to scopes/quota)
+        console.error("Gemini Imagen API failed:", err);
+        // Throw if it's a quota error so caller can display it
+        if (err.message?.includes("quota") || err.message?.includes("429")) throw err;
+        
+        // Fallback to pollinations.ai for general failures
         const encodedPrompt = encodeURIComponent(prompt);
         return `https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true&seed=${Math.random()}`;
       }
     } else {
-      const response = await ai.models.generateContent({
-        model: aiModel,
-        contents: {
-          parts: [
-            { text: prompt },
-          ],
-        },
-      });
+      // Use generateContent for gemini-*-image series models
+      // Default to gemini-2.5-flash-image if model is generic or empty
+      const targetModel = aiModel.includes("image") ? aiModel : "gemini-2.5-flash-image";
+      
+      try {
+        const response = await ai.models.generateContent({
+          model: targetModel,
+          contents: {
+            parts: [
+              { text: prompt },
+            ],
+          },
+          config: {
+            imageConfig: {
+              aspectRatio: "1:1"
+            }
+          }
+        });
 
-      for (const part of response.candidates?.[0]?.content?.parts || []) {
-        if (part.inlineData) {
-          return `data:${part.inlineData.mimeType || 'image/jpeg'};base64,${part.inlineData.data}`;
+        for (const part of response.candidates?.[0]?.content?.parts || []) {
+          if (part.inlineData) {
+            return `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
+          }
         }
+      } catch (err: any) {
+        console.error("Gemini Image Content API failed:", err);
+        if (err.message?.includes("quota") || err.message?.includes("429")) throw err;
+        
+        const encodedPrompt = encodeURIComponent(prompt);
+        return `https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true&seed=${Math.random()}`;
       }
     }
 
     return null;
   } catch (error) {
     console.error("Image Generation Error:", error);
-    return null;
+    throw error; // Let the caller handle the specific error (like quota)
   }
 }
 
@@ -335,6 +360,10 @@ async function getThirdPartyResponse(
     endpoint = "https://models.inference.ai.azure.com/chat/completions";
     apiKey = (import.meta as any).env.VITE_GITHUB_TOKEN;
     actualModel = aiModel.replace("github:", "");
+  } else if (aiModel.startsWith("openai:")) {
+    endpoint = "https://api.openai.com/v1/chat/completions";
+    apiKey = (import.meta as any).env.VITE_OPENAI_API_KEY;
+    actualModel = aiModel.replace("openai:", "");
   }
 
   if (!apiKey) {

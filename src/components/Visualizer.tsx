@@ -26,13 +26,14 @@ export default function Visualizer({ state, mood = "yaman", emotion = "neutral" 
 
   // Head Bobbing Animation
   const bobbingAnim = {
-    y: state === "listening" ? [-5, 5, -5] : state === "speaking" ? [-8, 2, -8] : state === "idle" ? [0, -12, 0] : [-12, 12, -12],
-    rotate: state === "processing" ? [-2, 2, -2] : state === "listening" ? [3, 5, 3] : state === "idle" ? [0, 1.5, -1.5, 0] : [0, 0, 0],
-    scale: state === "idle" ? [1, 1.02, 1] : 1,
+    y: state === "listening" ? [-5, 8, -2, 6, -5] : state === "speaking" ? [-8, 4, -6, 2, -10, 0, -8] : state === "idle" ? [0, -12, 0] : [-12, 12, -12],
+    rotate: state === "processing" ? [-2, 2, -2] : state === "listening" ? [3, -2, 4, -1, 3] : state === "idle" ? [0, 1.5, -1.5, 0] : [0, -3, 2, -2, 4, 0],
+    scale: state === "idle" ? [1, 1.02, 1] : state === "speaking" ? [1, 1.03, 0.98, 1.01, 1] : 1,
     transition: {
-        duration: state === "speaking" ? 0.4 : state === "processing" ? 0.6 : state === "idle" ? 2.5 : 2.5,
+        duration: state === "speaking" ? 1.5 : state === "listening" ? 2.0 : state === "processing" ? 0.6 : 2.5,
         repeat: Infinity,
-        ease: "easeInOut"
+        ease: "easeInOut",
+        times: state === "speaking" ? [0, 0.2, 0.4, 0.6, 0.8, 0.9, 1] : undefined
     }
   };
 
@@ -66,30 +67,32 @@ export default function Visualizer({ state, mood = "yaman", emotion = "neutral" 
 
   const leftEyeAnim = {
       rotate: leftEyeRotate,
-      scaleY: state === "listening" ? 2.5 : 1,
+      scaleY: state === "listening" ? [2.5, 2.8, 2.4, 2.6, 2.5] : 1,
       scaleX: state === "listening" ? 1.5 : 1,
       borderRadius: eyeBorderRadius,
       height: eyeHeight,
-      transition: { type: "spring", stiffness: 300, damping: 20 }
+      transition: state === "listening" ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" } : { type: "spring", stiffness: 300, damping: 20 }
   };
 
   const rightEyeAnim = {
       rotate: rightEyeRotate,
-      scaleY: state === "listening" ? 2.5 : 1,
+      scaleY: state === "listening" ? [2.5, 2.4, 2.7, 2.3, 2.5] : 1,
       scaleX: state === "listening" ? 1.5 : 1,
       borderRadius: eyeBorderRadius,
       height: eyeHeight,
-      transition: { type: "spring", stiffness: 300, damping: 20 }
+      transition: state === "listening" ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" } : { type: "spring", stiffness: 300, damping: 20 }
   };
 
   const mouthAnim = {
-     height: state === "speaking" ? ["0.25rem", "1rem", "0.5rem", "1.2rem", "0.25rem"] : state === "idle" ? "0.75rem" : state === "processing" ? "0.25rem" : "0.5rem",
-     width: state === "listening" ? "1rem" : "1.5rem",
+     height: state === "speaking" ? ["0.25rem", "1.5rem", "0.4rem", "1.2rem", "0.6rem", "1.8rem", "0.25rem"] : state === "idle" ? "0.75rem" : state === "processing" ? "0.25rem" : "0.5rem",
+     width: state === "listening" ? ["1rem", "1.2rem", "0.9rem", "1.1rem", "1rem"] : state === "speaking" ? ["1.5rem", "1.2rem", "1.8rem", "1.4rem", "1.5rem"] : "1.5rem",
      borderRadius: state === "speaking" ? "50%" : state === "idle" ? "0 0 1rem 1rem" : "9999px",
      borderBottomWidth: state === "idle" ? "4px" : "0px",
-     backgroundColor: state === "idle" ? "transparent" : "white",
+     backgroundColor: state === "idle" ? "transparent" : state === "speaking" ? ["#ffffff", "#ffecd2", "#ffffff", "#ffecd2", "#ffffff"] : "white",
      marginTop: state === "idle" ? "1.5rem" : "2rem",
-     transition: state === "speaking" ? { duration: 0.4, repeat: Infinity, ease: "easeInOut" } : { type: "spring" }
+     transition: state === "speaking" ? { duration: 0.8, repeat: Infinity, ease: "easeInOut", times: [0, 0.15, 0.3, 0.5, 0.7, 0.85, 1] } 
+                 : state === "listening" ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
+                 : { type: "spring" }
   };
 
   const getThemeVars = () => {
@@ -130,8 +133,11 @@ export default function Visualizer({ state, mood = "yaman", emotion = "neutral" 
           
           {/* Background Aura */}
           <motion.div 
-             animate={{ scale: state === 'speaking' ? [1, 1.2, 1] : 1, opacity: state === 'speaking' ? 0.8 : 0.4 }}
-             transition={{ duration: 1, repeat: Infinity }}
+             animate={{ 
+                scale: state === 'speaking' ? [1, 1.25, 0.95, 1.15, 1] : state === 'listening' ? [1, 1.1, 1] : 1, 
+                opacity: state === 'speaking' ? [0.6, 0.9, 0.7, 1, 0.6] : state === 'listening' ? [0.4, 0.7, 0.4] : 0.4 
+             }}
+             transition={{ duration: state === 'speaking' ? 1.2 : state === 'listening' ? 2 : 1, repeat: Infinity, ease: "easeInOut" }}
              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full blur-[60px]"
              style={{ backgroundColor: themeVars.primary }}
           />

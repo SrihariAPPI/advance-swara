@@ -10,7 +10,7 @@ export default function EmbedWidgetModal({ onClose }: Props) {
   const [copied, setCopied] = useState(false);
   
   // The production Vercel deployment URL where Swara is officially hosted
-  const appUrl = 'https://swara-psi.vercel.app/';
+  const appUrl = 'https://advance-swara.vercel.app/';
 
   const embedCode = `<script>
 (function(){

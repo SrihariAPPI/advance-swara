@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Mic, MicOff, Volume2, VolumeX, Keyboard, Send, Trash2, Settings as SettingsIcon, Search, Sparkles, Image as ImageIcon, CheckSquare, Code, Paperclip, FileText, X } from "lucide-react";
+import { Mic, MicOff, Volume2, VolumeX, Keyboard, Send, Trash2, Settings as SettingsIcon, Search, Sparkles, Image as ImageIcon, CheckSquare, Code, Paperclip, FileText, X, ExternalLink, Loader2 } from "lucide-react";
 import { getSwaraResponse, getSwaraAudio, resetSwaraSession } from "./services/geminiService";
 import { processCommand } from "./services/commandService";
 import { LiveSessionManager } from "./services/liveService";
@@ -12,6 +12,8 @@ import TaskManager from "./components/TaskManager";
 import EmbedWidgetModal from "./components/EmbedWidgetModal";
 import MicPromptModal from "./components/MicPromptModal";
 import Auth from "./components/Auth";
+import LoginPromptToast from "./components/LoginPromptToast";
+import PdfSearchModal from "./components/PdfSearchModal";
 import { auth } from "./lib/firebase";
 import { saveMessage, subscribeToMessages, saveUserSettings, loadUserSettings, wipeHistory } from "./services/firebaseService";
 import { playPCM } from "./utils/audioUtils";
@@ -39,7 +41,7 @@ export default function App() {
   // Settings State
   const [isMuted, setIsMuted] = useState(() => localStorage.getItem("swara_is_muted") === "true");
   const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem("swara_selected_voice") || "Kore");
-  const [selectedMood, setSelectedMood] = useState(() => localStorage.getItem("swara_selected_mood") || "yaman");
+  const [selectedMood, setSelectedMood] = useState(() => localStorage.getItem("swara_selected_mood") || "sassy");
   const [voiceSpeed, setVoiceSpeed] = useState(() => parseFloat(localStorage.getItem("swara_voice_speed") || "1.0"));
   const [voicePitch, setVoicePitch] = useState(() => parseInt(localStorage.getItem("swara_voice_pitch") || "0"));
   const [voiceAccent, setVoiceAccent] = useState(() => localStorage.getItem("swara_voice_accent") || "Neutral Indian");
@@ -50,7 +52,7 @@ export default function App() {
   });
   const [selectedImageModel, setSelectedImageModel] = useState(() => {
     const saved = localStorage.getItem("swara_image_model");
-    if (!saved || saved === "gemini-2.5-flash-image" || saved === "imagen-3.0-generate-002") return "imagen-3.0-generate-001";
+    if (!saved || saved === "imagen-3.0-generate-001" || saved === "imagen-3.0-generate-002") return "gemini-2.5-flash-image";
     return saved;
   });
   const [targetLanguage, setTargetLanguage] = useState(() => localStorage.getItem("swara_target_language") || "auto");
@@ -61,12 +63,14 @@ export default function App() {
   const [showChatHistory, setShowChatHistory] = useState(false);
   const [showArtGenerator, setShowArtGenerator] = useState(false);
   const [showTaskManager, setShowTaskManager] = useState(false);
+  const [showPdfSearch, setShowPdfSearch] = useState(false);
   const [showEmbedWidget, setShowEmbedWidget] = useState(false);
   const [showTextInput, setShowTextInput] = useState(false);
   const [textInput, setTextInput] = useState("");
   const [pdfContexts, setPdfContexts] = useState<{id: string, name: string, data: string, mimeType: string, selected: boolean}[]>([]);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [isSessionActive, setIsSessionActive] = useState(false);
+  const [isPdfProcessing, setIsPdfProcessing] = useState(false);
   const [micState, setMicState] = useState<"checking" | "granted" | "prompt">("checking");
   const [currentEmotion, setCurrentEmotion] = useState("neutral");
 
@@ -391,6 +395,7 @@ export default function App() {
     const validFiles = files.filter(file => file.type === "application/pdf");
     
     if (validFiles.length > 0) {
+      setIsPdfProcessing(true);
       setAppState("processing");
       try {
         const { extractTextFromPdf } = await import('./services/pdfService');
@@ -398,19 +403,43 @@ export default function App() {
         for (const file of validFiles) {
           const extractedText = await extractTextFromPdf(file);
           
-          setPdfContexts(prev => [...prev, {
-            id: Math.random().toString(36).substring(7),
-            name: file.name,
-            data: extractedText, // Now storing extracted text instead of base64
-            mimeType: "text/plain", // Change to text/plain since we extracted text
-            selected: true
-          }]);
+          setPdfContexts(prev => {
+            const currentTotalChars = prev.filter(p => p.selected).reduce((acc, curr) => acc + curr.data.length, 0);
+            const MAX_CHARS = 100000;
+            
+            let textToAdd = extractedText;
+            let warnUser = false;
+            
+            if (currentTotalChars + extractedText.length > MAX_CHARS) {
+              const allowedChars = MAX_CHARS - currentTotalChars;
+              if (allowedChars <= 0) {
+                alert(`Cannot add "${file.name}". You have reached the 100,000 character limit for PDF context limit.`);
+                return prev;
+              }
+              textToAdd = extractedText.substring(0, allowedChars) + "\n...[TRUNCATED DUE TO 100K CHAR LIMIT]";
+              warnUser = true;
+            }
+
+            if (warnUser) {
+              alert(`Warning: "${file.name}" was truncated to fit within the 100,000 character limit for PDF context.`);
+            }
+
+            return [...prev, {
+              id: Math.random().toString(36).substring(7),
+              name: file.name,
+              data: textToAdd, // Now storing extracted text instead of base64
+              mimeType: "text/plain", // Change to text/plain since we extracted text
+              selected: true
+            }];
+          });
         }
       } catch (error) {
         console.error("PDF read error:", error);
         alert("Failed to read PDF file.");
+      } finally {
+        setIsPdfProcessing(false);
+        setAppState("idle");
       }
-      setAppState("idle");
     } else if (files.length > 0) {
       alert("Please upload valid PDF files.");
     }
@@ -423,18 +452,18 @@ export default function App() {
 
   const getThemeBackground = () => {
     switch (selectedMood) {
-      case "yaman": return "radial-gradient(circle at 10% 20%, rgba(255, 159, 28, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(231, 111, 81, 0.08) 0%, transparent 40%), radial-gradient(circle at 50% 50%, rgba(38, 70, 83, 0.4) 0%, #0b141d 100%), url(\"data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='0.1' stroke-opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='45'/%3E%3Ccircle cx='50' cy='50' r='35'/%3E%3Ccircle cx='50' cy='50' r='25'/%3E%3Cpath d='M50 5 L50 95 M5 50 L95 50 M18 18 L82 82 M18 82 L82 18'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(-45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(90 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10'/%3E%3C/g%3E%3C/svg%3E\"), url(\"https://www.transparenttextures.com/patterns/natural-paper.png\")";
-      case "bhairavi": return "radial-gradient(circle at 10% 20%, rgba(139, 92, 246, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(192, 132, 252, 0.08) 0%, transparent 40%), radial-gradient(circle at 50% 50%, rgba(76, 29, 149, 0.4) 0%, #0b141d 100%), url(\"data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='0.1' stroke-opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='45'/%3E%3Ccircle cx='50' cy='50' r='35'/%3E%3Ccircle cx='50' cy='50' r='25'/%3E%3Cpath d='M50 5 L50 95 M5 50 L95 50 M18 18 L82 82 M18 82 L82 18'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(-45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(90 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10'/%3E%3C/g%3E%3C/svg%3E\"), url(\"https://www.transparenttextures.com/patterns/natural-paper.png\")";
-      case "megh": return "radial-gradient(circle at 10% 20%, rgba(34, 211, 238, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(34, 197, 94, 0.08) 0%, transparent 40%), radial-gradient(circle at 50% 50%, rgba(21, 94, 117, 0.4) 0%, #0b141d 100%), url(\"data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='0.1' stroke-opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='45'/%3E%3Ccircle cx='50' cy='50' r='35'/%3E%3Ccircle cx='50' cy='50' r='25'/%3E%3Cpath d='M50 5 L50 95 M5 50 L95 50 M18 18 L82 82 M18 82 L82 18'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(-45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(90 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10'/%3E%3C/g%3E%3C/svg%3E\"), url(\"https://www.transparenttextures.com/patterns/natural-paper.png\")";
-      case "deepak": return "radial-gradient(circle at 10% 20%, rgba(239, 68, 68, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(245, 158, 11, 0.08) 0%, transparent 40%), radial-gradient(circle at 50% 50%, rgba(153, 27, 27, 0.4) 0%, #0b141d 100%), url(\"data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='0.1' stroke-opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='45'/%3E%3Ccircle cx='50' cy='50' r='35'/%3E%3Ccircle cx='50' cy='50' r='25'/%3E%3Cpath d='M50 5 L50 95 M5 50 L95 50 M18 18 L82 82 M18 82 L82 18'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(-45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(90 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10'/%3E%3C/g%3E%3C/svg%3E\"), url(\"https://www.transparenttextures.com/patterns/natural-paper.png\")";
-      case "malhar": return "radial-gradient(circle at 10% 20%, rgba(52, 211, 153, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.08) 0%, transparent 40%), radial-gradient(circle at 50% 50%, rgba(6, 78, 59, 0.4) 0%, #0b141d 100%), url(\"data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='0.1' stroke-opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='45'/%3E%3Ccircle cx='50' cy='50' r='35'/%3E%3Ccircle cx='50' cy='50' r='25'/%3E%3Cpath d='M50 5 L50 95 M5 50 L95 50 M18 18 L82 82 M18 82 L82 18'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(-45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(90 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10'/%3E%3C/g%3E%3C/svg%3E\"), url(\"https://www.transparenttextures.com/patterns/natural-paper.png\")";
-      case "darbari": return "radial-gradient(circle at 10% 20%, rgba(129, 140, 248, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 40%), radial-gradient(circle at 50% 50%, rgba(30, 58, 138, 0.4) 0%, #0b141d 100%), url(\"data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='0.1' stroke-opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='45'/%3E%3Ccircle cx='50' cy='50' r='35'/%3E%3Ccircle cx='50' cy='50' r='25'/%3E%3Cpath d='M50 5 L50 95 M5 50 L95 50 M18 18 L82 82 M18 82 L82 18'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(-45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(90 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10'/%3E%3C/g%3E%3C/svg%3E\"), url(\"https://www.transparenttextures.com/patterns/natural-paper.png\")";
+      case "sassy": return "radial-gradient(circle at 10% 20%, rgba(239, 68, 68, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(245, 158, 11, 0.08) 0%, transparent 40%), radial-gradient(circle at 50% 50%, rgba(153, 27, 27, 0.4) 0%, #0b141d 100%), url(\"data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='0.1' stroke-opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='45'/%3E%3Ccircle cx='50' cy='50' r='35'/%3E%3Ccircle cx='50' cy='50' r='25'/%3E%3Cpath d='M50 5 L50 95 M5 50 L95 50 M18 18 L82 82 M18 82 L82 18'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(-45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(90 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10'/%3E%3C/g%3E%3C/svg%3E\"), url(\"https://www.transparenttextures.com/patterns/natural-paper.png\")";
+      case "calm": return "radial-gradient(circle at 10% 20%, rgba(34, 211, 238, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(34, 197, 94, 0.08) 0%, transparent 40%), radial-gradient(circle at 50% 50%, rgba(21, 94, 117, 0.4) 0%, #0b141d 100%), url(\"data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='0.1' stroke-opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='45'/%3E%3Ccircle cx='50' cy='50' r='35'/%3E%3Ccircle cx='50' cy='50' r='25'/%3E%3Cpath d='M50 5 L50 95 M5 50 L95 50 M18 18 L82 82 M18 82 L82 18'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(-45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(90 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10'/%3E%3C/g%3E%3C/svg%3E\"), url(\"https://www.transparenttextures.com/patterns/natural-paper.png\")";
+      case "playful": return "radial-gradient(circle at 10% 20%, rgba(255, 159, 28, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(231, 111, 81, 0.08) 0%, transparent 40%), radial-gradient(circle at 50% 50%, rgba(38, 70, 83, 0.4) 0%, #0b141d 100%), url(\"data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='0.1' stroke-opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='45'/%3E%3Ccircle cx='50' cy='50' r='35'/%3E%3Ccircle cx='50' cy='50' r='25'/%3E%3Cpath d='M50 5 L50 95 M5 50 L95 50 M18 18 L82 82 M18 82 L82 18'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(-45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(90 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10'/%3E%3C/g%3E%3C/svg%3E\"), url(\"https://www.transparenttextures.com/patterns/natural-paper.png\")";
+      case "serious": return "radial-gradient(circle at 10% 20%, rgba(129, 140, 248, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 40%), radial-gradient(circle at 50% 50%, rgba(30, 58, 138, 0.4) 0%, #0b141d 100%), url(\"data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='0.1' stroke-opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='45'/%3E%3Ccircle cx='50' cy='50' r='35'/%3E%3Ccircle cx='50' cy='50' r='25'/%3E%3Cpath d='M50 5 L50 95 M5 50 L95 50 M18 18 L82 82 M18 82 L82 18'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(-45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(90 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10'/%3E%3C/g%3E%3C/svg%3E\"), url(\"https://www.transparenttextures.com/patterns/natural-paper.png\")";
       default: return "radial-gradient(circle at 10% 20%, rgba(212, 175, 55, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(231, 111, 81, 0.08) 0%, transparent 40%), radial-gradient(circle at 50% 50%, rgba(38, 70, 83, 0.4) 0%, #0b141d 100%), url(\"data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='0.1' stroke-opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='45'/%3E%3Ccircle cx='50' cy='50' r='35'/%3E%3Ccircle cx='50' cy='50' r='25'/%3E%3Cpath d='M50 5 L50 95 M5 50 L95 50 M18 18 L82 82 M18 82 L82 18'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(-45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(90 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10'/%3E%3C/g%3E%3C/svg%3E\"), url(\"https://www.transparenttextures.com/patterns/natural-paper.png\")";
     }
   };
 
   return (
     <div className="h-[100dvh] w-screen hindustani-bg text-cream flex flex-col items-center justify-between font-sans relative overflow-hidden m-0 p-0" style={{ backgroundImage: getThemeBackground() }}>
+      <LoginPromptToast />
+      
       {showPermissionModal && (
         <PermissionModal 
           onClose={() => setShowPermissionModal(false)} 
@@ -488,6 +517,8 @@ export default function App() {
               setAiMaxTokens(tokens);
               localStorage.setItem("swara_ai_max_tokens", tokens.toString());
             }}
+            pdfContexts={pdfContexts}
+            setPdfContexts={setPdfContexts}
             onClose={() => setShowVoiceSettings(false)}
           />
         )}
@@ -546,23 +577,19 @@ export default function App() {
 
         <motion.div 
           animate={{
-            backgroundColor: selectedMood === 'yaman' ? 'rgba(255, 159, 28, 0.15)' : 
-                             selectedMood === 'bhairavi' ? 'rgba(139, 92, 246, 0.15)' :
-                             selectedMood === 'megh' ? 'rgba(34, 211, 238, 0.15)' :
-                             selectedMood === 'deepak' ? 'rgba(239, 68, 68, 0.15)' :
-                             selectedMood === 'malhar' ? 'rgba(52, 211, 153, 0.15)' :
+            backgroundColor: selectedMood === 'sassy' ? 'rgba(239, 68, 68, 0.15)' : 
+                             selectedMood === 'calm' ? 'rgba(34, 211, 238, 0.15)' :
+                             selectedMood === 'playful' ? 'rgba(255, 159, 28, 0.15)' :
                              'rgba(129, 140, 248, 0.15)'
           }}
           className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] blur-[120px] rounded-full transition-colors duration-1000" 
         />
         <motion.div 
           animate={{
-            backgroundColor: selectedMood === 'yaman' ? 'rgba(231, 111, 81, 0.15)' : 
-                             selectedMood === 'bhairavi' ? 'rgba(79, 70, 229, 0.15)' :
-                             selectedMood === 'megh' ? 'rgba(8, 145, 178, 0.15)' :
-                             selectedMood === 'deepak' ? 'rgba(185, 28, 28, 0.15)' :
-                             selectedMood === 'malhar' ? 'rgba(5, 150, 105, 0.15)' :
-                             'rgba(67, 56, 202, 0.15)'
+            backgroundColor: selectedMood === 'sassy' ? 'rgba(245, 158, 11, 0.15)' : 
+                             selectedMood === 'calm' ? 'rgba(34, 197, 94, 0.15)' :
+                             selectedMood === 'playful' ? 'rgba(231, 111, 81, 0.15)' :
+                             'rgba(59, 130, 246, 0.15)'
           }}
           className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] blur-[120px] rounded-full transition-colors duration-1000" 
         />
@@ -581,6 +608,14 @@ export default function App() {
           <h1 className="text-xl md:text-2xl font-cute font-bold text-marigold tracking-tight drop-shadow-md group-hover:scale-105 transition-transform duration-300">Swara</h1>
         </motion.div>
         <div className="flex items-center gap-1 sm:gap-2">
+          <button
+            onClick={() => window.open('https://advance-swara.vercel.app/', '_blank')}
+            className="flex items-center gap-1 sm:gap-1.5 px-3 py-1.5 md:py-2 md:px-4 rounded-full glass hover:bg-cream/10 border-marigold/20 text-marigold transition-all font-medium text-xs md:text-sm shadow-sm"
+            title="Open Advance Swara"
+          >
+            Advance Swara
+            <ExternalLink size={14} className="md:w-4 md:h-4 opacity-80" />
+          </button>
           <Auth />
           <button
             onClick={() => setShowEmbedWidget(true)}
@@ -615,8 +650,13 @@ export default function App() {
             onClick={() => fileInputRef.current?.click()}
             className={`p-1.5 md:p-2 rounded-full glass hover:bg-cream/10 transition-colors ${pdfContexts.length > 0 ? 'bg-marigold/20' : ''}`}
             title={pdfContexts.length > 0 ? `${pdfContexts.length} PDF(s) loaded` : "Upload PDF Context"}
+            disabled={isPdfProcessing}
           >
-            <FileText size={16} className={`${pdfContexts.length > 0 ? 'text-marigold' : 'text-saffron'} md:w-[18px] md:h-[18px]`} />
+            {isPdfProcessing ? (
+              <Loader2 size={16} className="text-marigold md:w-[18px] md:h-[18px] animate-spin" />
+            ) : (
+              <FileText size={16} className={`${pdfContexts.length > 0 ? 'text-marigold' : 'text-saffron'} md:w-[18px] md:h-[18px]`} />
+            )}
           </button>
           <button
             onClick={() => setShowChatHistory(true)}
@@ -755,8 +795,9 @@ export default function App() {
                   onClick={() => fileInputRef.current?.click()}
                   className="p-2 rounded-full text-cream/70 hover:text-marigold hover:bg-white/5 transition-colors"
                   title="Upload PDF Context"
+                  disabled={isPdfProcessing}
                 >
-                  <Paperclip size={16} />
+                  {isPdfProcessing ? <Loader2 size={16} className="animate-spin text-marigold" /> : <Paperclip size={16} />}
                 </button>
 
                 <button 
@@ -799,10 +840,27 @@ export default function App() {
                         </button>
                       </div>
                     ))}
+                    <button
+                      onClick={() => setShowPdfSearch(true)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-marigold/30 bg-marigold/10 text-marigold text-xs hover:bg-marigold/20 transition-colors"
+                    >
+                      <Search size={12} />
+                      Search PDFs
+                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>
             </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Global Modals */}
+        <AnimatePresence>
+          {showPdfSearch && (
+            <PdfSearchModal 
+              pdfContexts={pdfContexts} 
+              onClose={() => setShowPdfSearch(false)} 
+            />
           )}
         </AnimatePresence>
 

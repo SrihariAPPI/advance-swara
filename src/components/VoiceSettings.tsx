@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, Check, Upload, Music, Sunrise, Moon, CloudRain, Flame } from "lucide-react";
+import { X, Check, Upload, Music, Sunrise, Moon, CloudRain, Flame, FileText, Trash2, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface VoiceSettingsProps {
@@ -23,6 +23,8 @@ interface VoiceSettingsProps {
   onTemperatureChange?: (temp: number) => void;
   aiMaxTokens?: number;
   onMaxTokensChange?: (tokens: number) => void;
+  pdfContexts?: {id: string, name: string, data: string, mimeType: string, selected: boolean}[];
+  setPdfContexts?: React.Dispatch<React.SetStateAction<{id: string, name: string, data: string, mimeType: string, selected: boolean}[]>>;
   onClose: () => void;
 }
 
@@ -36,12 +38,10 @@ const PREBUILT_VOICES = [
 ];
 
 const MOOD_OPTIONS = [
-  { id: "yaman", name: "Raag Yaman", icon: Sunrise, color: "text-marigold", bg: "bg-marigold/10", desc: "Golden Hour / Divine" },
-  { id: "bhairavi", name: "Raag Bhairavi", icon: Moon, color: "text-violet-400", bg: "bg-violet-500/10", desc: "Melancholic / Pure" },
-  { id: "megh", name: "Raag Megh", icon: CloudRain, color: "text-sky-400", bg: "bg-sky-500/10", desc: "Monsoon / Refreshing" },
-  { id: "deepak", name: "Raag Deepak", icon: Flame, color: "text-terracotta", bg: "bg-terracotta/10", desc: "Fire / Passionate" },
-  { id: "malhar", name: "Raag Malhar", icon: CloudRain, color: "text-emerald-400", bg: "bg-emerald-500/10", desc: "Stormy / Romantic" },
-  { id: "darbari", name: "Raag Darbari", icon: Moon, color: "text-indigo-400", bg: "bg-indigo-500/10", desc: "Midnight / Majestic" },
+  { id: "sassy", name: "Sassy & Witty", icon: Flame, color: "text-terracotta", bg: "bg-terracotta/10", desc: "Sarcastically helpful" },
+  { id: "calm", name: "Calm & Zen", icon: Moon, color: "text-sky-400", bg: "bg-sky-500/10", desc: "Peaceful and reassuring" },
+  { id: "playful", name: "Playful & Fun", icon: Sunrise, color: "text-marigold", bg: "bg-marigold/10", desc: "Energetic and enthusiastic" },
+  { id: "serious", name: "Serious", icon: CloudRain, color: "text-indigo-400", bg: "bg-indigo-500/10", desc: "Direct, concise, formal" },
 ];
 
 export default function VoiceSettings({ 
@@ -57,7 +57,7 @@ export default function VoiceSettings({
   onAccentChange,
   currentLanguageModel = "gemini-3.1-flash-lite-preview",
   onLanguageModelChange,
-  currentImageModel = "imagen-3.0-generate-001",
+  currentImageModel = "gemini-2.5-flash-image",
   onImageModelChange,
   targetLanguage = "auto",
   onTargetLanguageChange,
@@ -65,6 +65,8 @@ export default function VoiceSettings({
   onTemperatureChange,
   aiMaxTokens = 800,
   onMaxTokensChange,
+  pdfContexts = [],
+  setPdfContexts,
   onClose 
 }: VoiceSettingsProps) {
   const [customModelName, setCustomModelName] = useState<string | null>(
@@ -139,16 +141,72 @@ export default function VoiceSettings({
                       <span className="text-[10px] opacity-40">{mood.desc}</span>
                     </div>
                     {isActive && <div className={`ml-auto w-1.5 h-1.5 rounded-full ${
-                      mood.id === 'yaman' ? 'bg-marigold' : 
-                      mood.id === 'bhairavi' ? 'bg-violet-400' : 
-                      mood.id === 'megh' ? 'bg-sky-400' : 
-                      mood.id === 'deepak' ? 'bg-terracotta' : 
-                      mood.id === 'malhar' ? 'bg-emerald-400' : 
+                      mood.id === 'sassy' ? 'bg-terracotta' : 
+                      mood.id === 'calm' ? 'bg-sky-400' : 
+                      mood.id === 'playful' ? 'bg-marigold' : 
                       'bg-indigo-400'
                     }`} />}
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Voice Section */}
+          <div className="space-y-3">
+            <label className="text-xs font-semibold text-cream/40 uppercase tracking-widest pl-1">Voice Profile</label>
+            <div className="grid grid-cols-1 gap-2 max-h-[220px] overflow-y-auto pr-2 scrollbar-hide">
+              {PREBUILT_VOICES.map((voice) => (
+                <button
+                  key={voice.id}
+                  onClick={() => onVoiceChange(voice.id)}
+                  className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ${
+                    currentVoice === voice.id
+                      ? "bg-marigold/10 border-marigold/50 text-cream"
+                      : "bg-cream/5 border-cream/5 text-cream/60 hover:bg-cream/10"
+                  }`}
+                >
+                  <div className="text-left">
+                    <div className="font-medium font-serif">{voice.name}</div>
+                    <div className="text-xs opacity-60">
+                      {voice.gender} • {voice.mood}
+                    </div>
+                  </div>
+                  {currentVoice === voice.id && <Check size={18} className="text-marigold" />}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-cream/10">
+            <label className="block text-sm font-medium text-cream/60 mb-3">Custom Voice Model</label>
+            <div className="relative">
+              <input
+                type="file"
+                className="hidden"
+                id="voice-upload"
+                accept=".json,.bin,.model,.wav"
+                onChange={handleFileUpload}
+              />
+              <label
+                htmlFor="voice-upload"
+                className={`flex items-center gap-3 p-4 rounded-xl border border-dashed cursor-pointer transition-all duration-200 ${
+                  currentVoice === "Custom"
+                    ? "bg-terracotta/10 border-terracotta/50 text-cream"
+                    : "bg-cream/5 border-cream/10 text-cream/60 hover:bg-cream/10"
+                }`}
+              >
+                <div className="w-10 h-10 rounded-lg bg-terracotta/20 flex items-center justify-center border border-terracotta/20">
+                  <Upload size={18} className="text-terracotta" />
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <div className="font-medium truncate">
+                    {customModelName ? `Loaded: ${customModelName}` : "Upload voice model"}
+                  </div>
+                  <div className="text-xs opacity-60">Supports .json, .model, or voice samples</div>
+                </div>
+                {currentVoice === "Custom" && <Check size={18} className="text-terracotta" />}
+              </label>
             </div>
           </div>
 
@@ -182,6 +240,11 @@ export default function VoiceSettings({
                     <option value="github:gpt-4o">GPT-4o (GitHub)</option>
                     <option value="github:gpt-4o-mini">GPT-4o Mini (GitHub)</option>
                   </optgroup>
+                  <optgroup label="OpenAI" className="bg-[#1a2e35]">
+                    <option value="openai:gpt-4o">GPT-4o (OpenAI)</option>
+                    <option value="openai:gpt-4o-mini">GPT-4o Mini (OpenAI)</option>
+                    <option value="openai:gpt-3.5-turbo">GPT-3.5 Turbo (OpenAI)</option>
+                  </optgroup>
                 </select>
                 <p className="text-[10px] text-cream/40 mt-2 ml-1 mb-4">
                   Higher-end models (like Pro) are smarter but slower. Lite/Flash models are faster for voice chats.
@@ -195,57 +258,66 @@ export default function VoiceSettings({
                       onChange={(e) => onImageModelChange(e.target.value)}
                       className="w-full bg-cream/5 border border-cream/10 rounded-lg px-3 py-2 text-sm text-cream/80 outline-none focus:border-marigold/50 transition-colors"
                     >
+                      <optgroup label="Recommended" className="bg-[#1a2e35]">
+                        <option value="gemini-2.5-flash-image" className="bg-[#1a2e35]">Gemini 2.5 Flash Image (Fastest)</option>
+                        <option value="gemini-3.1-flash-image-preview" className="bg-[#1a2e35]">Gemini 3.1 Flash Image (High Quality)</option>
+                      </optgroup>
                       <optgroup label="Google Imagen" className="bg-[#1a2e35]">
-                        <option value="imagen-3.0-generate-001" className="bg-[#1a2e35]">Imagen 3.0 Generate (Recommended)</option>
+                        <option value="imagen-3.0-generate-001" className="bg-[#1a2e35]">Imagen 3.0 Generate</option>
                         <option value="imagen-3.0-fast-generate-001" className="bg-[#1a2e35]">Imagen 3.0 Fast Generate</option>
                       </optgroup>
                     </select>
                   </div>
                 )}
 
-                {onTemperatureChange && (
-                  <div className="space-y-4 pt-4 border-t border-cream/10">
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs font-medium">
-                        <span className="text-cream/60 text-xs">Temperature (Creativity)</span>
-                        <span className="text-marigold">{aiTemperature.toFixed(2)}</span>
-                      </div>
-                      <input 
-                        type="range" 
-                        min="0.0" 
-                        max="2.0" 
-                        step="0.05"
-                        value={aiTemperature}
-                        onChange={(e) => onTemperatureChange(parseFloat(e.target.value))}
-                        className="w-full h-1.5 bg-cream/10 rounded-lg appearance-none cursor-pointer accent-marigold"
-                      />
-                      <div className="flex justify-between text-[10px] text-cream/30 uppercase tracking-tighter">
-                        <span>Precise</span>
-                        <span>Creative</span>
-                      </div>
-                    </div>
+              </div>
+            </div>
+          )}
 
-                    {onMaxTokensChange && (
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-xs font-medium">
-                          <span className="text-cream/60 text-xs">Max Tokens</span>
-                          <span className="text-marigold">{aiMaxTokens}</span>
-                        </div>
-                        <input 
-                          type="range" 
-                          min="100" 
-                          max="4000" 
-                          step="100"
-                          value={aiMaxTokens}
-                          onChange={(e) => onMaxTokensChange(parseInt(e.target.value, 10))}
-                          className="w-full h-1.5 bg-cream/10 rounded-lg appearance-none cursor-pointer accent-marigold"
-                        />
-                        <div className="flex justify-between text-[10px] text-cream/30 uppercase tracking-tighter">
-                          <span>Short</span>
-                          <span>Long</span>
-                        </div>
-                      </div>
-                    )}
+          {/* AI Settings Section */}
+          {onTemperatureChange && (
+            <div className="space-y-3 pt-2">
+              <label className="text-xs font-semibold text-cream/40 uppercase tracking-widest pl-1">AI Parameters</label>
+              <div className="bg-cream/5 p-4 rounded-xl border border-cream/5 space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs font-medium">
+                    <span className="text-cream/60 text-xs">AI Temperature (Creativity)</span>
+                    <span className="text-marigold">{aiTemperature.toFixed(2)}</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="0.0" 
+                    max="2.0" 
+                    step="0.05"
+                    value={aiTemperature}
+                    onChange={(e) => onTemperatureChange(parseFloat(e.target.value))}
+                    className="w-full h-1.5 bg-cream/10 rounded-lg appearance-none cursor-pointer accent-marigold"
+                  />
+                  <div className="flex justify-between text-[10px] text-cream/30 uppercase tracking-tighter">
+                    <span>Precise & Factual</span>
+                    <span>Highly Creative</span>
+                  </div>
+                </div>
+
+                {onMaxTokensChange && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs font-medium">
+                      <span className="text-cream/60 text-xs">Max Tokens (Response Length)</span>
+                      <span className="text-marigold">{aiMaxTokens}</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="100" 
+                      max="4000" 
+                      step="100"
+                      value={aiMaxTokens}
+                      onChange={(e) => onMaxTokensChange(parseInt(e.target.value, 10))}
+                      className="w-full h-1.5 bg-cream/10 rounded-lg appearance-none cursor-pointer accent-marigold"
+                    />
+                    <div className="flex justify-between text-[10px] text-cream/30 uppercase tracking-tighter">
+                      <span>Short</span>
+                      <span>Detailed</span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -343,6 +415,10 @@ export default function VoiceSettings({
                     <option value="Japanese" className="bg-[#1a2e35]">Respond in Japanese</option>
                     <option value="Mandarin" className="bg-[#1a2e35]">Respond in Mandarin</option>
                     <option value="Korean" className="bg-[#1a2e35]">Respond in Korean</option>
+                    <option value="Turkish" className="bg-[#1a2e35]">Respond in Turkish</option>
+                    <option value="Vietnamese" className="bg-[#1a2e35]">Respond in Vietnamese</option>
+                    <option value="Thai" className="bg-[#1a2e35]">Respond in Thai</option>
+                    <option value="Indonesian" className="bg-[#1a2e35]">Respond in Indonesian</option>
                   </select>
                   <p className="text-[10px] text-cream/40 mt-1">Swara will automatically understand whatever language you speak. Select 'Auto-Detect' to let her reply in the same language, or force her to always reply in a specific language.</p>
                 </div>
@@ -350,63 +426,53 @@ export default function VoiceSettings({
             </div>
           </div>
 
-          {/* Voice Section */}
-          <div className="space-y-3">
-            <label className="text-xs font-semibold text-cream/40 uppercase tracking-widest pl-1">Voice Profile</label>
-            <div className="grid grid-cols-1 gap-2 max-h-[220px] overflow-y-auto pr-2 scrollbar-hide">
-              {PREBUILT_VOICES.map((voice) => (
-                <button
-                  key={voice.id}
-                  onClick={() => onVoiceChange(voice.id)}
-                  className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ${
-                    currentVoice === voice.id
-                      ? "bg-marigold/10 border-marigold/50 text-cream"
-                      : "bg-cream/5 border-cream/5 text-cream/60 hover:bg-cream/10"
-                  }`}
-                >
-                  <div className="text-left">
-                    <div className="font-medium font-serif">{voice.name}</div>
-                    <div className="text-xs opacity-60">
-                      {voice.gender} • {voice.mood}
+          {/* PDF Context Section */}
+          {setPdfContexts && (
+            <div className="space-y-3 pt-4 border-t border-cream/10">
+              <label className="text-xs font-semibold text-cream/40 uppercase tracking-widest pl-1">Uploaded PDF Contexts</label>
+              {pdfContexts.length === 0 ? (
+                <div className="p-4 bg-cream/5 rounded-xl border border-cream/5 text-center text-cream/40 text-sm">
+                  No PDFs uploaded yet. Upload from the main chat bar.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-2 scrollbar-hide">
+                  {pdfContexts.map((pdf) => (
+                    <div 
+                      key={pdf.id}
+                      className={`flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 ${
+                        pdf.selected ? 'bg-marigold/10 border-marigold/30' : 'bg-cream/5 border-cream/10'
+                      }`}
+                    >
+                      <button 
+                        onClick={() => setPdfContexts(prev => prev.map(p => p.id === pdf.id ? { ...p, selected: !p.selected } : p))}
+                        className={`p-1.5 rounded-full transition-colors ${
+                          pdf.selected ? 'text-marigold' : 'text-cream/40 hover:text-cream/80 hover:bg-cream/10'
+                        }`}
+                      >
+                        <CheckCircle2 size={18} />
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm truncate font-medium ${pdf.selected ? 'text-cream' : 'text-cream/70'}`}>
+                          {pdf.name}
+                        </p>
+                        <p className="text-[10px] text-cream/40 uppercase mt-0.5">
+                          {pdf.selected ? 'Active Context' : 'Inactive'}
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => setPdfContexts(prev => prev.filter(p => p.id !== pdf.id))}
+                        className="p-1.5 text-cream/40 hover:text-red-400 hover:bg-white/10 rounded-full transition-colors"
+                        title="Remove PDF"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
-                  </div>
-                  {currentVoice === voice.id && <Check size={18} className="text-marigold" />}
-                </button>
-              ))}
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
-          <div className="pt-4 border-t border-cream/10">
-            <label className="block text-sm font-medium text-cream/60 mb-3">Custom Voice Model</label>
-            <div className="relative">
-              <input
-                type="file"
-                className="hidden"
-                id="voice-upload"
-                accept=".json,.bin,.model,.wav"
-                onChange={handleFileUpload}
-              />
-              <label
-                htmlFor="voice-upload"
-                className={`flex items-center gap-3 p-4 rounded-xl border border-dashed cursor-pointer transition-all duration-200 ${
-                  currentVoice === "Custom"
-                    ? "bg-terracotta/10 border-terracotta/50 text-cream"
-                    : "bg-cream/5 border-cream/10 text-cream/60 hover:bg-cream/10"
-                }`}
-              >
-                <div className="w-10 h-10 rounded-lg bg-terracotta/20 flex items-center justify-center border border-terracotta/20">
-                  <Upload size={18} className="text-terracotta" />
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  <div className="font-medium truncate">
-                    {customModelName ? `Loaded: ${customModelName}` : "Upload voice model"}
-                  </div>
-                  <div className="text-xs opacity-60">Supports .json, .model, or voice samples</div>
-                </div>
-                {currentVoice === "Custom" && <Check size={18} className="text-terracotta" />}
-              </label>
-            </div>
-          </div>
         </div>
 
         <button
