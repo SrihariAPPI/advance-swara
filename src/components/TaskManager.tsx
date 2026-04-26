@@ -22,24 +22,39 @@ export default function TaskManager({ onClose }: TaskManagerProps) {
 
   // Load Tasks
   useEffect(() => {
-    if (auth.currentUser) {
-      const q = query(collection(db, `users/${auth.currentUser.uid}/tasks`), orderBy("createdAt", "desc"));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const loadedTasks: Task[] = [];
-        snapshot.forEach((doc) => loadedTasks.push(doc.data() as Task));
-        setTasks(loadedTasks);
-      });
-      return () => unsubscribe();
-    } else {
-      const saved = localStorage.getItem("swara_tasks");
-      if (saved) {
-        try {
-          setTasks(JSON.parse(saved));
-        } catch (e) {
-          console.error("Failed to parse tasks", e);
+    let unsubscribe: (() => void) | null = null;
+
+    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+
+      if (user) {
+        const q = query(collection(db, `users/${user.uid}/tasks`), orderBy("createdAt", "desc"));
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          const loadedTasks: Task[] = [];
+          snapshot.forEach((doc) => loadedTasks.push(doc.data() as Task));
+          setTasks(loadedTasks);
+        }, (error) => {
+          console.error("Task loading error:", error);
+        });
+      } else {
+        const saved = localStorage.getItem("swara_tasks");
+        if (saved) {
+          try {
+            setTasks(JSON.parse(saved));
+          } catch (e) {
+            console.error("Failed to parse tasks", e);
+          }
         }
       }
-    }
+    });
+
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   // Save Tasks (Local)

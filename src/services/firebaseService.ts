@@ -137,8 +137,7 @@ export async function saveMessage(sender: "user" | "swara", text: string) {
 /**
  * Subscribes to chat messages for the current user
  */
-export function subscribeToMessages(callback: (messages: ChatMessage[]) => void) {
-  const user = auth.currentUser;
+export function subscribeToMessages(user: User, callback: (messages: ChatMessage[]) => void) {
   if (!user) return () => {};
 
   const q = query(
@@ -161,6 +160,11 @@ export function subscribeToMessages(callback: (messages: ChatMessage[]) => void)
     
     callback(messages);
   }, (error) => {
+    // If not signed in anymore, ignore the error
+    if (!auth.currentUser) {
+      console.warn("Message subscription interrupted by logout");
+      return;
+    }
     handleFirestoreError(error, OperationType.LIST, 'messages');
   });
 }

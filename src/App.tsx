@@ -110,8 +110,17 @@ export default function App() {
   const messagesRef = useRef(messages);
 
   useEffect(() => {
-    return auth.onAuthStateChanged((u) => {
+    let unsubscribeMessages: (() => void) | null = null;
+
+    const unsubscribeAuth = auth.onAuthStateChanged((u) => {
       setUser(u);
+      
+      // Cleanup previous message subscription
+      if (unsubscribeMessages) {
+        unsubscribeMessages();
+        unsubscribeMessages = null;
+      }
+
       if (u) {
         // Load initial settings from Firebase
         loadUserSettings().then(settings => {
@@ -126,16 +135,26 @@ export default function App() {
         });
 
         // Subscribe to messages
-        const unsubscribe = subscribeToMessages((fetchedMessages) => {
+        unsubscribeMessages = subscribeToMessages(u, (fetchedMessages) => {
           setMessages(fetchedMessages);
         });
-        return unsubscribe;
       } else {
         // Load from local storage if logged out
         const saved = localStorage.getItem("swara_chat_history");
-        if (saved) setMessages(JSON.parse(saved));
+        if (saved) {
+          try {
+            setMessages(JSON.parse(saved));
+          } catch (e) {
+            setMessages([]);
+          }
+        }
       }
     });
+
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeMessages) unsubscribeMessages();
+    };
   }, []);
 
   useEffect(() => {

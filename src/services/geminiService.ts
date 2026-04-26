@@ -147,7 +147,12 @@ export async function getSwaraResponse(
       return await getThirdPartyResponse(prompt, history, mood, traits, userName, aiModel, aiTemperature, aiMaxTokens, targetLanguage, pdfContexts);
     }
 
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return { text: "System: Gemini API key is missing. Please check your configuration.", emotion: "sad" };
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
     const traitsKey = JSON.stringify(traits);
     
     if (!chatSession || currentMood !== mood || currentTraits !== traitsKey || currentModel !== aiModel || currentTargetLang !== targetLanguage) {
@@ -181,31 +186,36 @@ export async function getSwaraResponse(
         formattedHistory.shift();
       }
 
-      chatSession = ai.chats.create({
-        model: aiModel,
-        config: {
-          temperature: aiTemperature,
-          maxOutputTokens: aiMaxTokens,
-          systemInstruction: getSystemInstruction(mood, traits.speed, traits.pitch, traits.accent, userName, targetLanguage),
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "OBJECT",
-            properties: {
-              text: {
-                type: "STRING",
-                description: "The verbal response you will say to the user, in character."
+      try {
+        chatSession = ai.chats.create({
+          model: aiModel,
+          config: {
+            temperature: aiTemperature,
+            maxOutputTokens: aiMaxTokens,
+            systemInstruction: getSystemInstruction(mood, traits.speed, traits.pitch, traits.accent, userName, targetLanguage),
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "OBJECT",
+              properties: {
+                text: {
+                  type: "STRING",
+                  description: "The verbal response you will say to the user, in character."
+                },
+                emotion: {
+                  type: "STRING",
+                  description: "Your current emotional state to display on your avatar.",
+                  enum: ["neutral", "happy", "sad", "angry", "surprised", "sassy"]
+                }
               },
-              emotion: {
-                type: "STRING",
-                description: "Your current emotional state to display on your avatar.",
-                enum: ["neutral", "happy", "sad", "angry", "surprised", "sassy"]
-              }
-            },
-            required: ["text", "emotion"]
-          }
-        },
-        history: formattedHistory,
-      });
+              required: ["text", "emotion"]
+            }
+          },
+          history: formattedHistory,
+        });
+      } catch (err: any) {
+        console.error("Failed to create chat session:", err);
+        return { text: "I'm having trouble starting our chat session. " + (err.message || "Unknown error"), emotion: "sad" };
+      }
     }
 
     let promptToSend = prompt;
@@ -216,28 +226,53 @@ export async function getSwaraResponse(
       let pdfText = pdfContexts.map(pdf => `--- ${pdf.name} ---\n${pdf.data}\n`).join('\n');
       
       // Truncate to prevent exceeding token limits on free tier API keys
-      const MAX_PDF_CHARS = 100000;
+      const MAX_PDF_CHARS = 80000;
       if (pdfText.length > MAX_PDF_CHARS) {
         pdfText = pdfText.substring(0, MAX_PDF_CHARS) + "\n...[CONTENT TRUNCATED DUE TO SIZE LIMITS]...";
       }
 
       promptToSend = prompt + pdfInstruction + pdfText;
     }
+
     const response = await chatSession.sendMessage({ message: promptToSend });
-    if (response.text) {
-      const data = JSON.parse(response.text);
-      return { 
-        text: data.text || "Ugh, fine. I have nothing to say.",
-        emotion: data.emotion || "sassy"
-      };
+    
+    // In SDK version 1.47.0+, response might have a text property or a text() method
+    let responseText = "";
+    if (typeof response.text === 'function') {
+      responseText = await response.text();
+    } else if (typeof response.text === 'string') {
+      responseText = response.text;
+    } else if (response.candidates?.[0]?.content?.parts?.[0]?.text) {
+      responseText = response.candidates[0].content.parts[0].text;
+    }
+
+    if (responseText) {
+      try {
+        const data = JSON.parse(responseText);
+        return { 
+          text: data.text || "Ugh, fine. I have nothing to say.",
+          emotion: data.emotion || "sassy"
+        };
+      } catch (e) {
+        console.warn("Failed to parse JSON from Gemini:", responseText);
+        // Fallback: If it's not JSON but has content, use it as text
+        return { 
+          text: responseText.slice(0, 500).replace(/["'{}]/g, ""), 
+          emotion: "neutral" 
+        };
+      }
     }
     return { text: "Ugh, fine. I have nothing to say.", emotion: "neutral" };
   } catch (error: any) {
     console.error("Gemini Error:", error);
-    if (error?.message?.includes("429") || error?.message?.includes("quota") || error?.message?.includes("exceeded")) {
+    const msg = error?.message || "";
+    if (msg.includes("429") || msg.includes("quota") || msg.includes("exceeded")) {
       return { text: "Oh no, my brain is too full or we reached the API quota limit! If you uploaded a huge PDF, try removing it or wait a minute before trying again.", emotion: "sad" };
     }
-    return { text: "Uff, mera dimaag kharab ho gaya hai. Something went wrong, try again later.", emotion: "sad" };
+    if (msg.includes("500") || msg.includes("Internal error")) {
+      return { text: "The AI service is having some internal issues. Let's try again in a few seconds.", emotion: "sad" };
+    }
+    return { text: "Uff, mera dimaag kharab ho gaya hai. something went wrong: " + (msg.slice(0, 100)), emotion: "sad" };
   }
 }
 
@@ -367,7 +402,11 @@ async function getThirdPartyResponse(
   }
 
   if (!apiKey) {
-    return { text: `Please add your ${aiModel.split(':')[0].toUpperCase()} API key in the Environment Variables or .env file to use this model.`, emotion: "sad" };
+    const provider = aiModel.split(':')[0].toUpperCase();
+    return { 
+      text: `System: ${provider} API key is missing. Please go to the "Settings" menu in AI Studio and add "VITE_${provider}_API_KEY" to your environment variables.`, 
+      emotion: "sad" 
+    };
   }
 
   const systemInstruction = getSystemInstruction(mood, traits.speed, traits.pitch, traits.accent, userName, targetLanguage) + 
