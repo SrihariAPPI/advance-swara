@@ -38,10 +38,10 @@ const PREBUILT_VOICES = [
 ];
 
 const MOOD_OPTIONS = [
-  { id: "sassy", name: "Sassy & Witty", icon: Flame, color: "text-terracotta", bg: "bg-terracotta/10", desc: "Sarcastically helpful" },
-  { id: "calm", name: "Calm & Zen", icon: Moon, color: "text-sky-400", bg: "bg-sky-500/10", desc: "Peaceful and reassuring" },
-  { id: "playful", name: "Playful & Fun", icon: Sunrise, color: "text-marigold", bg: "bg-marigold/10", desc: "Energetic and enthusiastic" },
-  { id: "serious", name: "Serious", icon: CloudRain, color: "text-indigo-400", bg: "bg-indigo-500/10", desc: "Direct, concise, formal" },
+  { id: "darbar", name: "Raaga Darbar", icon: Flame, color: "text-terracotta", bg: "bg-terracotta/10", desc: "Regal, confident, slightly witty" },
+  { id: "bhairavi", name: "Raaga Bhairavi", icon: Moon, color: "text-sky-400", bg: "bg-sky-500/10", desc: "Peaceful, meditative, reassuring" },
+  { id: "kapi", name: "Raaga Kapi", icon: Sunrise, color: "text-marigold", bg: "bg-marigold/10", desc: "Playful, enthusiastic, energetic" },
+  { id: "shree", name: "Raaga Shree", icon: CloudRain, color: "text-indigo-400", bg: "bg-indigo-500/10", desc: "Serious, formal, mysterious" },
 ];
 
 export default function VoiceSettings({ 
@@ -141,9 +141,9 @@ export default function VoiceSettings({
                       <span className="text-[10px] opacity-40">{mood.desc}</span>
                     </div>
                     {isActive && <div className={`ml-auto w-1.5 h-1.5 rounded-full ${
-                      mood.id === 'sassy' ? 'bg-terracotta' : 
-                      mood.id === 'calm' ? 'bg-sky-400' : 
-                      mood.id === 'playful' ? 'bg-marigold' : 
+                      mood.id === 'darbar' ? 'bg-terracotta' : 
+                      mood.id === 'bhairavi' ? 'bg-sky-400' : 
+                      mood.id === 'kapi' ? 'bg-marigold' : 
                       'bg-indigo-400'
                     }`} />}
                   </button>

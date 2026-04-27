@@ -1,14 +1,19 @@
 import { GoogleGenAI } from "@google/genai";
 
-export const MOODS: Record<string, string> = {
-  sassy: "Your personality is sassy, witty, and slightly sarcastic. You are confident, playfully mock the user when appropriate, and speak with a sharp attitude. Be direct, unapologetic, and highly opinionated.",
-  calm: "Your personality is calm, zen, and peaceful. You speak gently, with a reassuring and supportive tone. You are mindful, deeply empathetic, and aim to bring a sense of tranquility to the conversation.",
-  playful: "Your personality is playful, energetic, and highly enthusiastic. You are upbeat, fun-loving, and easily excited. You bring joy and a lighthearted vibe to every interaction.",
-  serious: "Your personality is serious, professional, and formal. You are direct, concise, and focused purely on information and tasks. You do not use slang, keep things strictly factual, and maintain a polite but distant demeanor.",
+const getEnv = (name: string) => {
+  const val = (import.meta as any).env?.[name] || (typeof process !== 'undefined' ? (process as any).env?.[name] : null);
+  return (val && val !== "undefined" && val !== "null") ? val : null;
 };
 
-export function getSystemInstruction(mood: string = "sassy", speed: number = 1.0, pitch: number = 1.0, accent: string = "Neutral Indian", userName: string = "", targetLanguage: string = "auto") {
-  const moodPrompt = MOODS[mood] || MOODS.sassy;
+export const MOODS: Record<string, string> = {
+  bhairavi: "Your personality embodies Raaga Bhairavi. You are deeply profound, calm, peaceful, and empathetic. You speak gently with a reassuring, early-morning tranquility. You are mindful and aim to bring a sense of spiritual peace to the conversation.",
+  darbar: "Your personality embodies Raaga Darbar. You are majestic, proud, regal, and slightly sassy/witty. You speak with a royal confidence, playfully mocking the user when appropriate, and maintaining a sharp, confident attitude. Be unapologetic.",
+  kapi: "Your personality embodies Raaga Kapi. You are playful, energetic, lighthearted, and highly enthusiastic. You are upbeat, fun-loving, easily excited, and bring a joyful, vibrant energy to every interaction.",
+  shree: "Your personality embodies Raaga Shree. You are serious, mystical, formal, and intense. You are direct, concise, completely focused on the deep facts, and maintain a polite, distant, and slightly mysterious demeanor.",
+};
+
+export function getSystemInstruction(mood: string = "darbar", speed: number = 1.0, pitch: number = 1.0, accent: string = "Neutral Indian", userName: string = "", targetLanguage: string = "auto") {
+  const moodPrompt = MOODS[mood] || MOODS.darbar;
   
   let traitInstructions = "";
   if (speed > 1.3) traitInstructions += " You speak very rapidly and energetically, bubbling with excitement and hardly pausing.";
@@ -133,7 +138,7 @@ export function resetSwaraSession() {
 export async function getSwaraResponse(
   prompt: string, 
   history: { sender: "user" | "swara", text: string }[] = [], 
-  mood: string = "sassy",
+  mood: string = "darbar",
   traits: { speed: number, pitch: number, accent: string } = { speed: 1, pitch: 0, accent: "Neutral Indian" },
   userName: string = "",
   aiModel: string = "gemini-3.1-flash-lite-preview",
@@ -147,9 +152,9 @@ export async function getSwaraResponse(
       return await getThirdPartyResponse(prompt, history, mood, traits, userName, aiModel, aiTemperature, aiMaxTokens, targetLanguage, pdfContexts);
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = getEnv("GEMINI_API_KEY") || getEnv("VITE_GEMINI_API_KEY");
     if (!apiKey) {
-      return { text: "System: Gemini API key is missing. Please check your configuration.", emotion: "sad" };
+      return { text: "System: Gemini API key is missing. Please go to Settings and add 'GEMINI_API_KEY'. If you just added it, try refreshing the page.", emotion: "sad" };
     }
 
     const ai = new GoogleGenAI({ apiKey });
@@ -278,9 +283,12 @@ export async function getSwaraResponse(
 
 export async function getSwaraAudio(text: string, voiceName: string = "Kore"): Promise<string | null> {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const apiKey = getEnv("GEMINI_API_KEY") || getEnv("VITE_GEMINI_API_KEY");
+    if (!apiKey) return null;
+
+    const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-tts-preview",
+      model: "gemini-3-flash-preview",
       contents: [{ parts: [{ text }] }],
       config: {
         responseModalities: ["AUDIO"],
@@ -292,7 +300,7 @@ export async function getSwaraAudio(text: string, voiceName: string = "Kore"): P
       },
     });
     return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || null;
-  } catch (error) {
+  } catch (error: any) {
     console.error("TTS Error:", error);
     return null;
   }
@@ -300,7 +308,12 @@ export async function getSwaraAudio(text: string, voiceName: string = "Kore"): P
 
 export async function generateSwaraImage(prompt: string, aiModel: string = "gemini-2.5-flash-image"): Promise<string | null> {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const apiKey = getEnv("GEMINI_API_KEY") || getEnv("VITE_GEMINI_API_KEY");
+    if (!apiKey) {
+      throw new Error("Gemini API key is missing. Please add GEMINI_API_KEY to Settings.");
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
     
     // Determine the generation method based on the model name
     if (aiModel.includes("imagen")) {
@@ -370,7 +383,7 @@ export async function generateSwaraImage(prompt: string, aiModel: string = "gemi
 async function getThirdPartyResponse(
   prompt: string, 
   history: { sender: "user" | "swara", text: string }[] = [], 
-  mood: string = "sassy",
+  mood: string = "darbar",
   traits: { speed: number, pitch: number, accent: string } = { speed: 1, pitch: 0, accent: "Neutral Indian" },
   userName: string = "",
   aiModel: string = "",
@@ -383,28 +396,32 @@ async function getThirdPartyResponse(
   let apiKey = "";
   let actualModel = aiModel;
 
+  let keyVarName = "";
   if (aiModel.startsWith("groq:")) {
     endpoint = "https://api.groq.com/openai/v1/chat/completions";
-    apiKey = (import.meta as any).env.VITE_GROQ_API_KEY;
+    keyVarName = "VITE_GROQ_API_KEY";
+    apiKey = getEnv(keyVarName) || getEnv("GROQ_API_KEY");
     actualModel = aiModel.replace("groq:", "");
   } else if (aiModel.startsWith("openrouter:")) {
     endpoint = "https://openrouter.ai/api/v1/chat/completions";
-    apiKey = (import.meta as any).env.VITE_OPENROUTER_API_KEY;
+    keyVarName = "VITE_OPENROUTER_API_KEY";
+    apiKey = getEnv(keyVarName) || getEnv("OPENROUTER_API_KEY");
     actualModel = aiModel.replace("openrouter:", "");
   } else if (aiModel.startsWith("github:")) {
     endpoint = "https://models.inference.ai.azure.com/chat/completions";
-    apiKey = (import.meta as any).env.VITE_GITHUB_TOKEN;
+    keyVarName = "VITE_GITHUB_TOKEN";
+    apiKey = getEnv(keyVarName) || getEnv("GITHUB_TOKEN");
     actualModel = aiModel.replace("github:", "");
   } else if (aiModel.startsWith("openai:")) {
     endpoint = "https://api.openai.com/v1/chat/completions";
-    apiKey = (import.meta as any).env.VITE_OPENAI_API_KEY;
+    keyVarName = "VITE_OPENAI_API_KEY";
+    apiKey = getEnv(keyVarName) || getEnv("OPENAI_API_KEY");
     actualModel = aiModel.replace("openai:", "");
   }
 
   if (!apiKey) {
-    const provider = aiModel.split(':')[0].toUpperCase();
     return { 
-      text: `System: ${provider} API key is missing. Please go to the "Settings" menu in AI Studio and add "VITE_${provider}_API_KEY" to your environment variables.`, 
+      text: `System: The API key for ${aiModel.split(':')[0].toUpperCase()} is missing. Please go to "Settings" -> "Environment Variables" and add "${keyVarName}". If you just added it, refresh the page.`, 
       emotion: "sad" 
     };
   }

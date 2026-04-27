@@ -13,7 +13,9 @@ import EmbedWidgetModal from "./components/EmbedWidgetModal";
 import MicPromptModal from "./components/MicPromptModal";
 import Auth from "./components/Auth";
 import LoginPromptToast from "./components/LoginPromptToast";
+import Onboarding from "./components/Onboarding";
 import PdfSearchModal from "./components/PdfSearchModal";
+import DesktopRecommendation from "./components/DesktopRecommendation";
 import { auth } from "./lib/firebase";
 import { saveMessage, subscribeToMessages, saveUserSettings, loadUserSettings, wipeHistory } from "./services/firebaseService";
 import { playPCM } from "./utils/audioUtils";
@@ -41,7 +43,7 @@ export default function App() {
   // Settings State
   const [isMuted, setIsMuted] = useState(() => localStorage.getItem("swara_is_muted") === "true");
   const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem("swara_selected_voice") || "Kore");
-  const [selectedMood, setSelectedMood] = useState(() => localStorage.getItem("swara_selected_mood") || "sassy");
+  const [selectedMood, setSelectedMood] = useState(() => localStorage.getItem("swara_selected_mood") || "darbar");
   const [voiceSpeed, setVoiceSpeed] = useState(() => parseFloat(localStorage.getItem("swara_voice_speed") || "1.0"));
   const [voicePitch, setVoicePitch] = useState(() => parseInt(localStorage.getItem("swara_voice_pitch") || "0"));
   const [voiceAccent, setVoiceAccent] = useState(() => localStorage.getItem("swara_voice_accent") || "Neutral Indian");
@@ -471,16 +473,18 @@ export default function App() {
 
   const getThemeBackground = () => {
     switch (selectedMood) {
-      case "sassy": return "radial-gradient(circle at 10% 20%, rgba(239, 68, 68, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(245, 158, 11, 0.08) 0%, transparent 40%), radial-gradient(circle at 50% 50%, rgba(153, 27, 27, 0.4) 0%, #0b141d 100%), url(\"data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='0.1' stroke-opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='45'/%3E%3Ccircle cx='50' cy='50' r='35'/%3E%3Ccircle cx='50' cy='50' r='25'/%3E%3Cpath d='M50 5 L50 95 M5 50 L95 50 M18 18 L82 82 M18 82 L82 18'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(-45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(90 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10'/%3E%3C/g%3E%3C/svg%3E\"), url(\"https://www.transparenttextures.com/patterns/natural-paper.png\")";
-      case "calm": return "radial-gradient(circle at 10% 20%, rgba(34, 211, 238, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(34, 197, 94, 0.08) 0%, transparent 40%), radial-gradient(circle at 50% 50%, rgba(21, 94, 117, 0.4) 0%, #0b141d 100%), url(\"data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='0.1' stroke-opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='45'/%3E%3Ccircle cx='50' cy='50' r='35'/%3E%3Ccircle cx='50' cy='50' r='25'/%3E%3Cpath d='M50 5 L50 95 M5 50 L95 50 M18 18 L82 82 M18 82 L82 18'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(-45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(90 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10'/%3E%3C/g%3E%3C/svg%3E\"), url(\"https://www.transparenttextures.com/patterns/natural-paper.png\")";
-      case "playful": return "radial-gradient(circle at 10% 20%, rgba(255, 159, 28, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(231, 111, 81, 0.08) 0%, transparent 40%), radial-gradient(circle at 50% 50%, rgba(38, 70, 83, 0.4) 0%, #0b141d 100%), url(\"data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='0.1' stroke-opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='45'/%3E%3Ccircle cx='50' cy='50' r='35'/%3E%3Ccircle cx='50' cy='50' r='25'/%3E%3Cpath d='M50 5 L50 95 M5 50 L95 50 M18 18 L82 82 M18 82 L82 18'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(-45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(90 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10'/%3E%3C/g%3E%3C/svg%3E\"), url(\"https://www.transparenttextures.com/patterns/natural-paper.png\")";
-      case "serious": return "radial-gradient(circle at 10% 20%, rgba(129, 140, 248, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 40%), radial-gradient(circle at 50% 50%, rgba(30, 58, 138, 0.4) 0%, #0b141d 100%), url(\"data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='0.1' stroke-opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='45'/%3E%3Ccircle cx='50' cy='50' r='35'/%3E%3Ccircle cx='50' cy='50' r='25'/%3E%3Cpath d='M50 5 L50 95 M5 50 L95 50 M18 18 L82 82 M18 82 L82 18'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(-45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(90 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10'/%3E%3C/g%3E%3C/svg%3E\"), url(\"https://www.transparenttextures.com/patterns/natural-paper.png\")";
+      case "darbar": return "radial-gradient(circle at 10% 20%, rgba(239, 68, 68, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(245, 158, 11, 0.08) 0%, transparent 40%), radial-gradient(circle at 50% 50%, rgba(153, 27, 27, 0.4) 0%, #0b141d 100%), url(\"data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='0.1' stroke-opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='45'/%3E%3Ccircle cx='50' cy='50' r='35'/%3E%3Ccircle cx='50' cy='50' r='25'/%3E%3Cpath d='M50 5 L50 95 M5 50 L95 50 M18 18 L82 82 M18 82 L82 18'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(-45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(90 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10'/%3E%3C/g%3E%3C/svg%3E\"), url(\"https://www.transparenttextures.com/patterns/natural-paper.png\")";
+      case "bhairavi": return "radial-gradient(circle at 10% 20%, rgba(34, 211, 238, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(34, 197, 94, 0.08) 0%, transparent 40%), radial-gradient(circle at 50% 50%, rgba(21, 94, 117, 0.4) 0%, #0b141d 100%), url(\"data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='0.1' stroke-opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='45'/%3E%3Ccircle cx='50' cy='50' r='35'/%3E%3Ccircle cx='50' cy='50' r='25'/%3E%3Cpath d='M50 5 L50 95 M5 50 L95 50 M18 18 L82 82 M18 82 L82 18'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(-45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(90 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10'/%3E%3C/g%3E%3C/svg%3E\"), url(\"https://www.transparenttextures.com/patterns/natural-paper.png\")";
+      case "kapi": return "radial-gradient(circle at 10% 20%, rgba(255, 159, 28, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(231, 111, 81, 0.08) 0%, transparent 40%), radial-gradient(circle at 50% 50%, rgba(38, 70, 83, 0.4) 0%, #0b141d 100%), url(\"data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='0.1' stroke-opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='45'/%3E%3Ccircle cx='50' cy='50' r='35'/%3E%3Ccircle cx='50' cy='50' r='25'/%3E%3Cpath d='M50 5 L50 95 M5 50 L95 50 M18 18 L82 82 M18 82 L82 18'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(-45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(90 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10'/%3E%3C/g%3E%3C/svg%3E\"), url(\"https://www.transparenttextures.com/patterns/natural-paper.png\")";
+      case "shree": return "radial-gradient(circle at 10% 20%, rgba(129, 140, 248, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 40%), radial-gradient(circle at 50% 50%, rgba(30, 58, 138, 0.4) 0%, #0b141d 100%), url(\"data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='0.1' stroke-opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='45'/%3E%3Ccircle cx='50' cy='50' r='35'/%3E%3Ccircle cx='50' cy='50' r='25'/%3E%3Cpath d='M50 5 L50 95 M5 50 L95 50 M18 18 L82 82 M18 82 L82 18'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(-45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(90 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10'/%3E%3C/g%3E%3C/svg%3E\"), url(\"https://www.transparenttextures.com/patterns/natural-paper.png\")";
       default: return "radial-gradient(circle at 10% 20%, rgba(212, 175, 55, 0.08) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(231, 111, 81, 0.08) 0%, transparent 40%), radial-gradient(circle at 50% 50%, rgba(38, 70, 83, 0.4) 0%, #0b141d 100%), url(\"data:image/svg+xml,%3Csvg width='800' height='800' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23D4AF37' stroke-width='0.1' stroke-opacity='0.03'%3E%3Ccircle cx='50' cy='50' r='45'/%3E%3Ccircle cx='50' cy='50' r='35'/%3E%3Ccircle cx='50' cy='50' r='25'/%3E%3Cpath d='M50 5 L50 95 M5 50 L95 50 M18 18 L82 82 M18 82 L82 18'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(-45 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10' transform='rotate(90 50 50)'/%3E%3Cellipse cx='50' cy='50' rx='40' ry='10'/%3E%3C/g%3E%3C/svg%3E\"), url(\"https://www.transparenttextures.com/patterns/natural-paper.png\")";
     }
   };
 
   return (
     <div className="h-[100dvh] w-screen hindustani-bg text-cream flex flex-col items-center justify-between font-sans relative overflow-hidden m-0 p-0" style={{ backgroundImage: getThemeBackground() }}>
+      <Onboarding />
+      <DesktopRecommendation />
       <LoginPromptToast />
       
       {showPermissionModal && (
@@ -596,18 +600,18 @@ export default function App() {
 
         <motion.div 
           animate={{
-            backgroundColor: selectedMood === 'sassy' ? 'rgba(239, 68, 68, 0.15)' : 
-                             selectedMood === 'calm' ? 'rgba(34, 211, 238, 0.15)' :
-                             selectedMood === 'playful' ? 'rgba(255, 159, 28, 0.15)' :
+            backgroundColor: selectedMood === 'darbar' ? 'rgba(239, 68, 68, 0.15)' : 
+                             selectedMood === 'bhairavi' ? 'rgba(34, 211, 238, 0.15)' :
+                             selectedMood === 'kapi' ? 'rgba(255, 159, 28, 0.15)' :
                              'rgba(129, 140, 248, 0.15)'
           }}
           className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] blur-[120px] rounded-full transition-colors duration-1000" 
         />
         <motion.div 
           animate={{
-            backgroundColor: selectedMood === 'sassy' ? 'rgba(245, 158, 11, 0.15)' : 
-                             selectedMood === 'calm' ? 'rgba(34, 197, 94, 0.15)' :
-                             selectedMood === 'playful' ? 'rgba(231, 111, 81, 0.15)' :
+            backgroundColor: selectedMood === 'darbar' ? 'rgba(245, 158, 11, 0.15)' : 
+                             selectedMood === 'bhairavi' ? 'rgba(34, 197, 94, 0.15)' :
+                             selectedMood === 'kapi' ? 'rgba(231, 111, 81, 0.15)' :
                              'rgba(59, 130, 246, 0.15)'
           }}
           className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] blur-[120px] rounded-full transition-colors duration-1000" 
@@ -644,6 +648,7 @@ export default function App() {
             <Code size={16} className="text-saffron md:w-[18px] md:h-[18px]" />
           </button>
           <button
+            id="onboarding-tasks"
             onClick={() => setShowTaskManager(true)}
             className="p-1.5 md:p-2 rounded-full glass hover:bg-cream/10 transition-colors"
             title="My Tasks"
@@ -651,6 +656,7 @@ export default function App() {
             <CheckSquare size={16} className="text-saffron md:w-[18px] md:h-[18px]" />
           </button>
           <button
+            id="onboarding-art"
             onClick={() => setShowArtGenerator(true)}
             className="p-1.5 md:p-2 rounded-full glass hover:bg-cream/10 transition-colors"
             title="Generate Art"
@@ -696,6 +702,7 @@ export default function App() {
             )}
           </button>
           <button
+            id="onboarding-settings"
             onClick={() => setShowVoiceSettings(true)}
             className="p-1.5 md:p-2 rounded-full glass hover:bg-cream/10 transition-colors"
             title="Voice Settings"
@@ -885,6 +892,7 @@ export default function App() {
 
         <div className="flex items-center gap-4">
           <button
+            id="onboarding-session"
             onClick={toggleListening}
             className={`
               group relative flex items-center gap-3 px-8 py-4 rounded-full font-medium tracking-widest transition-all duration-300 shadow-2xl uppercase text-sm glass
@@ -910,6 +918,7 @@ export default function App() {
           
           {!isSessionActive && (
             <button
+              id="onboarding-keyboard"
               onClick={() => setShowTextInput(!showTextInput)}
               className="p-4 rounded-full glass hover:bg-cream/10 transition-colors shadow-2xl"
               title="Type instead"
