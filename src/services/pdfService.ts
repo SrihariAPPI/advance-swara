@@ -22,8 +22,13 @@ export async function extractTextFromPdf(file: File): Promise<string> {
     }
     
     return text.trim();
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error extracting PDF text:", error);
-    throw error;
+    if (error.name === 'PasswordException') {
+      throw new Error('Password protected PDFs are not supported context.');
+    } else if (error.name === 'InvalidPDFException') {
+      throw new Error('Invalid or corrupted PDF file.');
+    }
+    throw new Error(error.message || 'Unknown error occurred while parsing PDF');
   }
 }

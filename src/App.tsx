@@ -421,7 +421,14 @@ export default function App() {
       try {
         const { extractTextFromPdf } = await import('./services/pdfService');
         
+        const MAX_FILE_SIZE_MB = 10;
+        
         for (const file of validFiles) {
+          if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+            alert(`File "${file.name}" is too large. Please upload PDFs smaller than ${MAX_FILE_SIZE_MB}MB.`);
+            continue;
+          }
+
           const extractedText = await extractTextFromPdf(file);
           
           setPdfContexts(prev => {
@@ -454,15 +461,21 @@ export default function App() {
             }];
           });
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("PDF read error:", error);
-        alert("Failed to read PDF file.");
+        if (error?.message?.includes('Password') || error?.name === 'PasswordException') {
+            alert("Failed to read PDF file: The PDF is password protected. Please unlock it and try again.");
+        } else if (error?.name === 'InvalidPDFException' || error?.message?.includes('Invalid or corrupted')) {
+            alert("Failed to read PDF file: The PDF seems to be invalid or corrupted.");
+        } else {
+            alert(`Failed to read PDF file: ${error?.message || 'Unknown error occurred or file is corrupted.'}`);
+        }
       } finally {
         setIsPdfProcessing(false);
         setAppState("idle");
       }
     } else if (files.length > 0) {
-      alert("Please upload valid PDF files.");
+      alert("Please upload valid PDF files ending with .pdf.");
     }
     
     // reset input
