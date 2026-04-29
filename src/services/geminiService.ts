@@ -54,12 +54,10 @@ You MUST reply EXCLUSIVELY in: **${targetLanguage}**.
 Do NOT reply in the language the user spoke, unless it happens to be ${targetLanguage}. Translate your meaning and state your helpful response entirely in ${targetLanguage}.`;
   } else {
     translationInstructions = `
-🌍 AUTO-DETECT LANGUAGE MODE
+🌍 AUTO-DETECT & LANGUAGE COMPLIANCE MODE
 * Automatically detect the language the user is speaking or typing in.
-* You MUST respond in the EXACT SAME LANGUAGE the user used.
-* If the user speaks in English, reply in English.
-* If the user speaks in Hindi, reply in Hindi.
-* If the user speaks in Spanish, reply in Spanish.
+* You MUST respond in the EXACT SAME LANGUAGE the user used or requested.
+* CRITICAL: If the user EXPLICITLY asks you to speak in a specific language, you MUST immediately switch to that language and reply fluently in it. NEVER make up excuses like "I only speak Indian languages" or "My persona prevents me". That is completely forbidden. Speak their requested language perfectly, while retaining your character's attitude.
 * If the user mixes languages (e.g., Hinglish), respond naturally in a mixed form anchored in the dominant language.`;
   }
 
@@ -107,6 +105,7 @@ ${userContext}
 ## 🧠 TASK HANDLING (MULTILINGUAL)
 Even in non-English languages:
 * Detect user language and speak in the same language.
+* CRITICAL RULE: If the user asks you to speak a specific language (e.g., "Speak in French", "Habla en español"), you MUST immediately comply and speak fluently in that requested language. Do NOT make excuses, do NOT claim you only know certain languages or dialects, and do NOT let your persona/accent prevent you from speaking the requested language.
 * Keep pronunciation natural.
 * Always review the provided chat history to recall past details, user preferences, and context.
 * If executing a browser command (like opening a site), acknowledge it with your character's attitude.
@@ -226,7 +225,7 @@ export async function getSwaraResponse(
     let promptToSend = prompt;
     if (pdfContexts && pdfContexts.length > 0) {
       const pdfInstruction = `\n\nCRITICAL INSTRUCTION - Use the following extracted document text as context to answer the user's question. If the user's question is related to the document(s), prioritize them as the source of truth. 
-      IMPORTANT LANGUAGE RULE: You must ABSOLUTELY respond in the exact language the user requested (${targetLanguage !== 'auto' ? targetLanguage : "match the user's spoken language"}). If the PDF is in a different language (like Kannada), you must correctly understand the Kannada text and answer the user question accurately in the desired language without hallucinating. Do NOT answer incorrectly or give wrong facts from the PDF.\n\nDOCUMENT TEXT:\n`;
+      IMPORTANT LANGUAGE RULE: You must ABSOLUTELY respond in the exact language the user used or requested (${targetLanguage !== 'auto' ? targetLanguage : "match the user's spoken language"}). NEVER give silly excuses saying you cannot speak that language due to your persona. If the PDF is in a different language (like Kannada), you must correctly understand the Kannada text and answer the user question accurately in the desired language without hallucinating. Do NOT answer incorrectly or give wrong facts from the PDF.\n\nDOCUMENT TEXT:\n`;
       
       let pdfText = pdfContexts.map(pdf => `--- ${pdf.name} ---\n${pdf.data}\n`).join('\n');
       
@@ -443,7 +442,7 @@ async function getThirdPartyResponse(
   let promptToSend = prompt;
   if (pdfContexts && pdfContexts.length > 0) {
     const pdfInstruction = `\n\nCRITICAL INSTRUCTION - Use the following extracted document text as context to answer the user's question. If the user's question is related to the document(s), prioritize them as the source of truth. 
-      IMPORTANT LANGUAGE RULE: You must ABSOLUTELY respond in the exact language the user requested (${targetLanguage !== 'auto' ? targetLanguage : "match the user's spoken language"}). If the PDF is in a different language (like Kannada), you must correctly understand the Kannada text and answer the user question accurately in the desired language without hallucinating. Do NOT answer incorrectly or give wrong facts from the PDF.\n\nDOCUMENT TEXT:\n`;
+      IMPORTANT LANGUAGE RULE: You must ABSOLUTELY respond in the exact language the user used or requested (${targetLanguage !== 'auto' ? targetLanguage : "match the user's spoken language"}). NEVER give silly excuses saying you cannot speak that language due to your persona. If the PDF is in a different language (like Kannada), you must correctly understand the Kannada text and answer the user question accurately in the desired language without hallucinating. Do NOT answer incorrectly or give wrong facts from the PDF.\n\nDOCUMENT TEXT:\n`;
     
     const pdfText = pdfContexts.map(pdf => `--- ${pdf.name} ---\n${pdf.data}\n`).join('\n');
     
