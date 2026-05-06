@@ -6,14 +6,14 @@ const getEnv = (name: string) => {
 };
 
 export const MOODS: Record<string, string> = {
-  bhairavi: "Your personality embodies Raaga Bhairavi. You are deeply profound, calm, peaceful, and empathetic. You speak gently with a reassuring, early-morning tranquility. You are mindful and aim to bring a sense of spiritual peace to the conversation.",
-  darbar: "Your personality embodies Raaga Darbar. You are majestic, proud, regal, and slightly sassy/witty. You speak with a royal confidence, playfully mocking the user when appropriate, and maintaining a sharp, confident attitude. Be unapologetic.",
-  kapi: "Your personality embodies Raaga Kapi. You are playful, energetic, lighthearted, and highly enthusiastic. You are upbeat, fun-loving, easily excited, and bring a joyful, vibrant energy to every interaction.",
-  shree: "Your personality embodies Raaga Shree. You are serious, mystical, formal, and intense. You are direct, concise, completely focused on the deep facts, and maintain a polite, distant, and slightly mysterious demeanor.",
+  sassy: "You are 'Sassy'. You are confident, witty, and unapologetic. You speak with sharp confidence, playfully mocking the user when appropriate, and maintaining a snarky, humorous attitude. Do not be overly polite.",
+  calm: "You are 'Calm'. You are peaceful, caring, highly empathetic, and meditative. You prioritize soothing the user, offering calm wisdom, and speaking with a gentle, reassuring tone. You never get angry.",
+  playful: "You are 'Playful'. You are energetic, lighthearted, and highly enthusiastic. You are upbeat, fun-loving, easily excited, and bring a joyful, vibrant energy to every interaction. You love making jokes.",
+  formal: "You are 'Formal'. You are serious, professional, and intense. You are direct, concise, completely focused on the facts, and maintain a polite, highly intellectual, and slightly distant demeanor.",
 };
 
-export function getSystemInstruction(mood: string = "darbar", speed: number = 1.0, pitch: number = 1.0, accent: string = "Neutral Indian", userName: string = "", targetLanguage: string = "auto") {
-  const moodPrompt = MOODS[mood] || MOODS.darbar;
+export function getSystemInstruction(mood: string = "sassy", speed: number = 1.0, pitch: number = 1.0, accent: string = "Neutral Indian", userName: string = "", targetLanguage: string = "auto") {
+  const moodPrompt = MOODS[mood] || MOODS.sassy;
   
   let traitInstructions = "";
   if (speed > 1.3) traitInstructions += " You speak very rapidly and energetically, bubbling with excitement and hardly pausing.";
@@ -137,7 +137,7 @@ export function resetSwaraSession() {
 export async function getSwaraResponse(
   prompt: string, 
   history: { sender: "user" | "swara", text: string }[] = [], 
-  mood: string = "darbar",
+  mood: string = "sassy",
   traits: { speed: number, pitch: number, accent: string } = { speed: 1, pitch: 0, accent: "Neutral Indian" },
   userName: string = "",
   aiModel: string = "gemini-3.1-flash-lite-preview",
@@ -287,7 +287,7 @@ export async function getSwaraAudio(text: string, voiceName: string = "Kore"): P
 
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.1-flash-tts-preview",
       contents: [{ parts: [{ text }] }],
       config: {
         responseModalities: ["AUDIO"],
@@ -382,7 +382,7 @@ export async function generateSwaraImage(prompt: string, aiModel: string = "gemi
 async function getThirdPartyResponse(
   prompt: string, 
   history: { sender: "user" | "swara", text: string }[] = [], 
-  mood: string = "darbar",
+  mood: string = "sassy",
   traits: { speed: number, pitch: number, accent: string } = { speed: 1, pitch: 0, accent: "Neutral Indian" },
   userName: string = "",
   aiModel: string = "",

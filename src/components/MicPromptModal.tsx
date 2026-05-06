@@ -14,6 +14,9 @@ export default function MicPromptModal({ onGranted, onDismiss }: Props) {
   const requestAccess = async () => {
     setIsLoading(true);
     try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Microphone access is not available.");
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       // Clean up the stream immediately since we just wanted the permission
       stream.getTracks().forEach(track => track.stop());

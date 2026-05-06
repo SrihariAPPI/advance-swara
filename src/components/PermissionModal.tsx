@@ -4,9 +4,10 @@ import { MicOff } from 'lucide-react';
 
 interface Props {
   onClose: () => void;
+  errorMessage?: string;
 }
 
-export default function PermissionModal({ onClose }: Props) {
+export default function PermissionModal({ onClose, errorMessage }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
       <motion.div 
@@ -22,7 +23,7 @@ export default function PermissionModal({ onClose }: Props) {
         
         <h2 className="text-2xl font-serif font-medium text-marigold mb-3">Microphone Blocked</h2>
         <p className="text-cream/60 text-sm mb-6 leading-relaxed">
-          Your browser has blocked microphone access for this site. Swara cannot hear you until you allow it.
+          {errorMessage || "Your browser has blocked microphone access for this site. Swara cannot hear you until you allow it."}
         </p>
         
         <div className="bg-cream/5 border border-cream/10 rounded-xl p-4 text-left w-full mb-8">

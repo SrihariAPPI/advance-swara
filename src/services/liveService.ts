@@ -47,6 +47,9 @@ export class LiveSessionManager {
       this.nextPlayTime = this.playbackContext.currentTime;
 
       // Get Microphone
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Microphone access is not supported or was blocked. Please ensure you have granted microphone permissions and are in a secure context (HTTPS).");
+      }
       this.mediaStream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           channelCount: 1,
@@ -212,6 +215,7 @@ export class LiveSessionManager {
     } catch (error) {
       console.error("Failed to start Live Session:", error);
       this.stop();
+      throw error;
     }
   }
 
