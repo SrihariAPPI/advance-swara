@@ -54,7 +54,7 @@ export default function App() {
   });
   const [selectedImageModel, setSelectedImageModel] = useState(() => {
     const saved = localStorage.getItem("swara_image_model");
-    if (!saved || saved === "imagen-3.0-generate-001" || saved === "imagen-3.0-generate-002") return "gemini-2.5-flash-image";
+    if (!saved || saved === "gemini-2.5-flash-image" || saved === "imagen-3.0-generate-001") return "imagen-3.0-generate-002";
     return saved;
   });
   const [targetLanguage, setTargetLanguage] = useState(() => localStorage.getItem("swara_target_language") || "auto");
@@ -519,7 +519,7 @@ export default function App() {
         {micState === "prompt" && (
           <MicPromptModal 
             onGranted={() => setMicState("granted")} 
-            onDismiss={() => setMicState("granted")} // Let them pass into the app without microphone
+            onDismiss={() => { setMicState("granted"); setShowTextInput(true); }} // Let them pass into the app without microphone
           />
         )}
       </AnimatePresence>

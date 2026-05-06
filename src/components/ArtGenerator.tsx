@@ -8,7 +8,7 @@ interface ArtGeneratorProps {
   aiModel?: string;
 }
 
-export default function ArtGenerator({ onClose, aiModel = "gemini-2.5-flash-image" }: ArtGeneratorProps) {
+export default function ArtGenerator({ onClose, aiModel = "imagen-3.0-generate-002" }: ArtGeneratorProps) {
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);

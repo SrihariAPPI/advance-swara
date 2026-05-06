@@ -50,14 +50,18 @@ export class LiveSessionManager {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error("Microphone access is not supported or was blocked. Please ensure you have granted microphone permissions and are in a secure context (HTTPS).");
       }
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          channelCount: 1,
-          sampleRate: 16000,
-          echoCancellation: true,
-          noiseSuppression: true,
-        } 
-      });
+      try {
+        this.mediaStream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            channelCount: 1,
+            sampleRate: 16000,
+            echoCancellation: true,
+            noiseSuppression: true,
+          } 
+        });
+      } catch (mediaError: any) {
+        throw new Error(`Microphone access error: ${mediaError.message || "Permission denied"}. Please allow microphone access in your browser settings and try again.`);
+      }
 
       this.source = this.audioContext.createMediaStreamSource(this.mediaStream);
       this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);

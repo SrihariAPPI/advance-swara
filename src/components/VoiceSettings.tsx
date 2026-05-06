@@ -44,7 +44,48 @@ const MOOD_OPTIONS = [
   { id: "formal", name: "Formal", icon: CloudRain, color: "text-indigo-400", bg: "bg-indigo-500/10", desc: "Serious, professional, concise" },
 ];
 
-export default function VoiceSettings({ 
+const ApiKeysSettings = () => {
+  const keys = [
+    { id: "GEMINI_API_KEY", label: "Gemini API Key" },
+    { id: "GITHUB_TOKEN", label: "GitHub Token" },
+    { id: "GROQ_API_KEY", label: "Groq API Key" },
+    { id: "OPENROUTER_API_KEY", label: "OpenRouter API Key" },
+    { id: "OPENAI_API_KEY", label: "OpenAI API Key" },
+  ];
+
+  const handleKeyChange = (id: string, value: string) => {
+    if (value) {
+      localStorage.setItem(`swara_key_${id}`, value);
+    } else {
+      localStorage.removeItem(`swara_key_${id}`);
+    }
+  };
+
+  return (
+    <div className="space-y-3 pt-2">
+      <label className="text-xs font-semibold text-cream/40 uppercase tracking-widest pl-1">API Keys</label>
+      <div className="bg-cream/5 p-4 rounded-xl border border-cream/5 space-y-3">
+        {keys.map((key) => (
+          <div key={key.id} className="space-y-1">
+            <label className="text-[10px] uppercase text-cream/60 tracking-wider pl-1">{key.label}</label>
+            <input
+              type="password"
+              placeholder={`Enter ${key.label}`}
+              defaultValue={localStorage.getItem(`swara_key_${key.id}`) || ""}
+              onChange={(e) => handleKeyChange(key.id, e.target.value)}
+              className="w-full bg-black/20 border border-cream/10 rounded-lg px-3 py-2 text-sm text-cream/80 outline-none focus:border-marigold/50 transition-colors"
+            />
+          </div>
+        ))}
+        <p className="text-[10px] text-cream/40 mt-2 ml-1">
+          Keys entered here are stored locally in your browser and will override environment variables. Let's you easily use other models without redeploying.
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default function VoiceSettings({  
   currentVoice, 
   onVoiceChange, 
   currentMood, 
@@ -57,7 +98,7 @@ export default function VoiceSettings({
   onAccentChange,
   currentLanguageModel = "gemini-3.1-flash-lite-preview",
   onLanguageModelChange,
-  currentImageModel = "gemini-2.5-flash-image",
+  currentImageModel = "imagen-3.0-generate-002",
   onImageModelChange,
   targetLanguage = "auto",
   onTargetLanguageChange,
@@ -273,6 +314,9 @@ export default function VoiceSettings({
               </div>
             </div>
           )}
+
+          {/* API Keys Section */}
+          <ApiKeysSettings />
 
           {/* AI Settings Section */}
           {onTemperatureChange && (

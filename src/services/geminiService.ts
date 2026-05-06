@@ -1,6 +1,10 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Modality } from "@google/genai";
 
 const getEnv = (name: string) => {
+  if (typeof window !== 'undefined') {
+    const localVal = window.localStorage.getItem(`swara_key_${name}`);
+    if (localVal) return localVal;
+  }
   const val = (import.meta as any).env?.[name] || (typeof process !== 'undefined' ? (process as any).env?.[name] : null);
   return (val && val !== "undefined" && val !== "null") ? val : null;
 };
@@ -290,7 +294,7 @@ export async function getSwaraAudio(text: string, voiceName: string = "Kore"): P
       model: "gemini-3.1-flash-tts-preview",
       contents: [{ parts: [{ text }] }],
       config: {
-        responseModalities: ["AUDIO"],
+        responseModalities: [Modality.AUDIO],
         speechConfig: {
           voiceConfig: {
             prebuiltVoiceConfig: { voiceName },
@@ -298,14 +302,16 @@ export async function getSwaraAudio(text: string, voiceName: string = "Kore"): P
         },
       },
     });
-    return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || null;
+    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    if (!base64Audio) console.warn("TTS generated response but no inlineData received", response.candidates);
+    return base64Audio || null;
   } catch (error: any) {
     console.error("TTS Error:", error);
     return null;
   }
 }
 
-export async function generateSwaraImage(prompt: string, aiModel: string = "gemini-2.5-flash-image"): Promise<string | null> {
+export async function generateSwaraImage(prompt: string, aiModel: string = "imagen-3.0-generate-002"): Promise<string | null> {
   try {
     const apiKey = getEnv("GEMINI_API_KEY") || getEnv("VITE_GEMINI_API_KEY");
     if (!apiKey) {
