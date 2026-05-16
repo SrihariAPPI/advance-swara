@@ -148,7 +148,8 @@ export async function getSwaraResponse(
   aiTemperature: number = 0.7,
   aiMaxTokens: number = 800,
   targetLanguage: string = "auto",
-  pdfContexts: {name: string, data: string, mimeType: string}[] = []
+  pdfContexts: {name: string, data: string, mimeType: string}[] = [],
+  imageContext: {data: string, mimeType: string} | null = null
 ): Promise<{ text: string, emotion: string }> {
   try {
     if (aiModel.startsWith("groq:") || aiModel.startsWith("openrouter:") || aiModel.startsWith("github:") || aiModel.startsWith("openai:")) {
@@ -242,7 +243,15 @@ export async function getSwaraResponse(
       promptToSend = prompt + pdfInstruction + pdfText;
     }
 
-    const response = await chatSession.sendMessage({ message: promptToSend });
+    let messagePayload: any = promptToSend;
+    if (imageContext) {
+      messagePayload = [
+        { inlineData: { mimeType: imageContext.mimeType, data: imageContext.data } },
+        { text: promptToSend }
+      ];
+    }
+
+    const response = await chatSession.sendMessage({ message: messagePayload });
     
     // In SDK version 1.47.0+, response might have a text property or a text() method
     let responseText = "";
@@ -395,7 +404,8 @@ async function getThirdPartyResponse(
   aiTemperature: number = 0.7,
   aiMaxTokens: number = 800,
   targetLanguage: string = "auto",
-  pdfContexts: {name: string, data: string, mimeType: string}[] = []
+  pdfContexts: {name: string, data: string, mimeType: string}[] = [],
+  imageContext: {data: string, mimeType: string} | null = null
 ): Promise<{ text: string, emotion: string }> {
   let endpoint = "";
   let apiKey = "";
@@ -455,7 +465,15 @@ async function getThirdPartyResponse(
     promptToSend = prompt + pdfInstruction + pdfText;
   }
   
-  messages.push({ role: "user", content: promptToSend });
+  let userContent: any = promptToSend;
+  if (imageContext) {
+    userContent = [
+      { type: "text", text: promptToSend },
+      { type: "image_url", image_url: { url: `data:${imageContext.mimeType};base64,${imageContext.data}` } }
+    ];
+  }
+  
+  messages.push({ role: "user", content: userContent });
 
   try {
     const response = await fetch(endpoint, {

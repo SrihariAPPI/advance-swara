@@ -25,6 +25,8 @@ interface VoiceSettingsProps {
   onMaxTokensChange?: (tokens: number) => void;
   pdfContexts?: {id: string, name: string, data: string, mimeType: string, selected: boolean}[];
   setPdfContexts?: React.Dispatch<React.SetStateAction<{id: string, name: string, data: string, mimeType: string, selected: boolean}[]>>;
+  imageContext?: {data: string, mimeType: string, url: string} | null;
+  setImageContext?: React.Dispatch<React.SetStateAction<{data: string, mimeType: string, url: string} | null>>;
   onClose: () => void;
 }
 
@@ -108,6 +110,8 @@ export default function VoiceSettings({
   onMaxTokensChange,
   pdfContexts = [],
   setPdfContexts,
+  imageContext = null,
+  setImageContext,
   onClose 
 }: VoiceSettingsProps) {
   const [customModelName, setCustomModelName] = useState<string | null>(
@@ -123,6 +127,20 @@ export default function VoiceSettings({
       localStorage.setItem("swara_custom_voice_name", file.name);
       onVoiceChange("Custom");
       alert(`Voice profile "${file.name}" loaded! Swara will now adapt to this model (Simulation).`);
+    }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && setImageContext) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64Data = reader.result?.toString().split(',')[1];
+        if (base64Data) {
+          setImageContext({ data: base64Data, mimeType: file.type, url: URL.createObjectURL(file) });
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -514,6 +532,56 @@ export default function VoiceSettings({
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Image Context Section */}
+          {setImageContext && (
+            <div className="space-y-3 pt-4 border-t border-cream/10">
+              <label className="text-xs font-semibold text-cream/40 uppercase tracking-widest pl-1">Image Analysis / Vision</label>
+              
+              <div className="relative">
+                <input
+                  type="file"
+                  className="hidden"
+                  id="image-context-upload"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                />
+                {!imageContext ? (
+                  <label
+                    htmlFor="image-context-upload"
+                    className="flex flex-col items-center justify-center gap-3 p-6 rounded-xl border border-dashed border-cream/20 bg-cream/5 hover:bg-cream/10 cursor-pointer transition-colors text-cream/60"
+                  >
+                    <Upload size={24} />
+                    <div className="text-center">
+                      <p className="text-sm font-medium">Upload Image for AI Processing</p>
+                      <p className="text-xs opacity-60 mt-1">Swara will see this image in your next request</p>
+                    </div>
+                  </label>
+                ) : (
+                  <div className="flex flex-col gap-3 p-4 rounded-xl border border-marigold/30 bg-marigold/5 relative">
+                    <button
+                      onClick={() => setImageContext(null)}
+                      className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full hover:bg-red-500/80 transition-colors z-10"
+                      title="Remove Image"
+                    >
+                      <X size={16} />
+                    </button>
+                    <div className="aspect-video relative rounded-lg overflow-hidden border border-white/10 bg-black/50 flex items-center justify-center">
+                      <img 
+                        src={imageContext.url} 
+                        alt="Uploaded preview" 
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-cream">Image Active for Vision</p>
+                      <p className="text-[10px] text-cream/50 mt-1 uppercase tracking-wider">Ask Swara about this image</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

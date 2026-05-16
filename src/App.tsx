@@ -70,6 +70,7 @@ export default function App() {
   const [showTextInput, setShowTextInput] = useState(false);
   const [textInput, setTextInput] = useState("");
   const [pdfContexts, setPdfContexts] = useState<{id: string, name: string, data: string, mimeType: string, selected: boolean}[]>([]);
+  const [imageContext, setImageContext] = useState<{data: string, mimeType: string, url: string} | null>(null);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [permissionError, setPermissionError] = useState("");
   const [isSessionActive, setIsSessionActive] = useState(false);
@@ -321,7 +322,7 @@ export default function App() {
       // 2. General Chit-Chat via Gemini
       const userName = auth.currentUser?.displayName || "the user";
       const activePdfs = pdfContexts.filter(pdf => pdf.selected);
-      const aiResponse = await getSwaraResponse(finalTranscript, messagesRef.current, selectedMood, { speed: voiceSpeed, pitch: voicePitch, accent: voiceAccent }, userName, selectedLanguageModel, aiTemperature, aiMaxTokens, targetLanguage, activePdfs);
+      const aiResponse = await getSwaraResponse(finalTranscript, messagesRef.current, selectedMood, { speed: voiceSpeed, pitch: voicePitch, accent: voiceAccent }, userName, selectedLanguageModel, aiTemperature, aiMaxTokens, targetLanguage, activePdfs, imageContext);
       
       responseText = aiResponse.text;
       setCurrentEmotion(aiResponse.emotion);
@@ -564,6 +565,8 @@ export default function App() {
             }}
             pdfContexts={pdfContexts}
             setPdfContexts={setPdfContexts}
+            imageContext={imageContext}
+            setImageContext={setImageContext}
             onClose={() => setShowVoiceSettings(false)}
           />
         )}
