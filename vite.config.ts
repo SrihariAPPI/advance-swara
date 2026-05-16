@@ -10,7 +10,11 @@ export default defineConfig(({mode}) => {
     base: './',
     plugins: [react(), tailwindcss(), imagetools()],
     define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+      'process.env.GEMINI_API_KEY': JSON.stringify(process.env.GEMINI_API_KEY || env.GEMINI_API_KEY || ''),
+      'process.env.GITHUB_TOKEN': JSON.stringify(process.env.GITHUB_TOKEN || env.GITHUB_TOKEN || ''),
+      'process.env.GROQ_API_KEY': JSON.stringify(process.env.GROQ_API_KEY || env.GROQ_API_KEY || ''),
+      'process.env.OPENROUTER_API_KEY': JSON.stringify(process.env.OPENROUTER_API_KEY || env.OPENROUTER_API_KEY || ''),
+      'process.env.OPENAI_API_KEY': JSON.stringify(process.env.OPENAI_API_KEY || env.OPENAI_API_KEY || ''),
     },
     resolve: {
       alias: {

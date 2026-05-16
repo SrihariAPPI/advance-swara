@@ -5,6 +5,14 @@ const getEnv = (name: string) => {
     const localVal = window.localStorage.getItem(`swara_key_${name}`);
     if (localVal) return localVal;
   }
+  try {
+    if (name === 'GEMINI_API_KEY' && process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "undefined") return process.env.GEMINI_API_KEY;
+    if (name === 'GITHUB_TOKEN' && process.env.GITHUB_TOKEN && process.env.GITHUB_TOKEN !== "undefined") return process.env.GITHUB_TOKEN;
+    if (name === 'GROQ_API_KEY' && process.env.GROQ_API_KEY && process.env.GROQ_API_KEY !== "undefined") return process.env.GROQ_API_KEY;
+    if (name === 'OPENROUTER_API_KEY' && process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY !== "undefined") return process.env.OPENROUTER_API_KEY;
+    if (name === 'OPENAI_API_KEY' && process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== "undefined") return process.env.OPENAI_API_KEY;
+  } catch(e) {}
+
   const val = (import.meta as any).env?.[name] || (typeof process !== 'undefined' ? (process as any).env?.[name] : null);
   return (val && val !== "undefined" && val !== "null") ? val : null;
 };
