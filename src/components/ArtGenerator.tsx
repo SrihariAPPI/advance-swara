@@ -10,6 +10,7 @@ interface ArtGeneratorProps {
 
 export default function ArtGenerator({ onClose, aiModel = "imagen-3.0-generate-002" }: ArtGeneratorProps) {
   const [prompt, setPrompt] = useState('');
+  const [aspectRatio, setAspectRatio] = useState<"1:1" | "16:9" | "9:16">("1:1");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +23,7 @@ export default function ArtGenerator({ onClose, aiModel = "imagen-3.0-generate-0
     setError(null);
     try {
       const artPrompt = `High quality, aesthetic, digital art: ${prompt}`;
-      const imageUrl = await generateSwaraImage(artPrompt, aiModel);
+      const imageUrl = await generateSwaraImage(artPrompt, aiModel, aspectRatio);
       if (imageUrl) {
         setGeneratedImageUrl(imageUrl);
       } else {
@@ -64,8 +65,8 @@ export default function ArtGenerator({ onClose, aiModel = "imagen-3.0-generate-0
               <p className="text-sm font-medium">Describe your imagination, and I will paint it for you.</p>
             </div>
           ) : (
-            <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-black/40 border border-white/10 shadow-lg group">
-              <img src={generatedImageUrl} alt={prompt} className="w-full h-full object-cover" />
+            <div className={`relative w-full rounded-xl overflow-hidden bg-black/40 border border-white/10 shadow-lg group ${aspectRatio === "16:9" ? "aspect-video" : aspectRatio === "9:16" ? "aspect-[9/16]" : "aspect-square"}`}>
+              <img src={generatedImageUrl} alt={prompt} className="w-full h-full object-contain bg-black/80" />
               <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex justify-end">
                 <a 
                   href={generatedImageUrl} 
@@ -88,14 +89,26 @@ export default function ArtGenerator({ onClose, aiModel = "imagen-3.0-generate-0
 
         <div className="p-4 bg-black/20 border-t border-white/10">
           <form onSubmit={handleGenerate} className="flex flex-col gap-3">
-            <input
-              type="text"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="e.g. A digital artwork of a classic Indian palace at sunset..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-cream placeholder:text-cream/50 outline-none focus:border-marigold/50 transition-colors"
-              disabled={isGenerating}
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="e.g. A digital artwork of a classic Indian palace at sunset..."
+                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-cream placeholder:text-cream/50 outline-none focus:border-marigold/50 transition-colors"
+                disabled={isGenerating}
+              />
+              <select
+                value={aspectRatio}
+                onChange={(e) => setAspectRatio(e.target.value as any)}
+                disabled={isGenerating}
+                className="bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-sm text-cream outline-none focus:border-marigold/50 transition-colors [&>option]:bg-peacock"
+              >
+                <option value="1:1">1:1 (Square)</option>
+                <option value="16:9">16:9 (Landscape)</option>
+                <option value="9:16">9:16 (Portrait)</option>
+              </select>
+            </div>
             <button
               type="submit"
               disabled={!prompt.trim() || isGenerating}

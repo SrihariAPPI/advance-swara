@@ -328,7 +328,7 @@ export async function getSwaraAudio(text: string, voiceName: string = "Kore"): P
   }
 }
 
-export async function generateSwaraImage(prompt: string, aiModel: string = "imagen-3.0-generate-002"): Promise<string | null> {
+export async function generateSwaraImage(prompt: string, aiModel: string = "imagen-3.0-generate-002", aspectRatio: "1:1" | "16:9" | "9:16" = "1:1"): Promise<string | null> {
   try {
     const apiKey = getEnv("GEMINI_API_KEY") || getEnv("VITE_GEMINI_API_KEY");
     if (!apiKey) {
@@ -345,7 +345,7 @@ export async function generateSwaraImage(prompt: string, aiModel: string = "imag
           prompt: prompt,
           config: {
             numberOfImages: 1,
-            aspectRatio: "1:1",
+            aspectRatio: aspectRatio,
           }
         });
         const imageBytes = response.generatedImages?.[0]?.image?.imageBytes;
@@ -353,19 +353,22 @@ export async function generateSwaraImage(prompt: string, aiModel: string = "imag
           return `data:image/png;base64,${imageBytes}`;
         }
       } catch (err: any) {
-        const errDetails = err?.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
+        const errString = typeof err === 'string' ? err : JSON.stringify(err, Object.getOwnPropertyNames(err));
         
-        if (errDetails.includes("PERMISSION_DENIED") || errDetails.includes("403") || errDetails.includes("denied access")) {
+        if (errString.includes("PERMISSION_DENIED") || errString.includes("403") || errString.includes("denied access")) {
           console.log("Imagen not enabled on this API key. Falling back to alternative generator.");
         } else {
-          console.warn("Gemini Imagen API failed:", errDetails);
+          console.warn("Gemini Imagen API failed:", errString);
         }
         // Throw if it's a quota error so caller can display it
-        if (errDetails.includes("quota") || errDetails.includes("429")) throw err;
+        if (errString.includes("quota") || errString.includes("429")) throw err;
         
         // Fallback to pollinations.ai for general failures
         const encodedPrompt = encodeURIComponent(prompt);
-        return `https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true&seed=${Math.random()}`;
+        let width = 1024, height = 1024;
+        if (aspectRatio === "16:9") { width = 1024; height = 576; }
+        else if (aspectRatio === "9:16") { width = 576; height = 1024; }
+        return `https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true&seed=${Math.random()}&width=${width}&height=${height}`;
       }
     } else {
       // Use generateContent for gemini-*-image series models
@@ -382,7 +385,7 @@ export async function generateSwaraImage(prompt: string, aiModel: string = "imag
           },
           config: {
             imageConfig: {
-              aspectRatio: "1:1"
+              aspectRatio: aspectRatio
             }
           }
         });
@@ -393,17 +396,20 @@ export async function generateSwaraImage(prompt: string, aiModel: string = "imag
           }
         }
       } catch (err: any) {
-        const errDetails = err?.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
+        const errString = typeof err === 'string' ? err : JSON.stringify(err, Object.getOwnPropertyNames(err));
         
-        if (errDetails.includes("PERMISSION_DENIED") || errDetails.includes("403") || errDetails.includes("denied access")) {
+        if (errString.includes("PERMISSION_DENIED") || errString.includes("403") || errString.includes("denied access")) {
           console.log("Image generation not enabled on this API key. Falling back to alternative generator.");
         } else {
-          console.warn("Gemini Image Content API failed:", errDetails);
+          console.warn("Gemini Image Content API failed:", errString);
         }
-        if (errDetails.includes("quota") || errDetails.includes("429")) throw err;
+        if (errString.includes("quota") || errString.includes("429")) throw err;
         
         const encodedPrompt = encodeURIComponent(prompt);
-        return `https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true&seed=${Math.random()}`;
+        let width = 1024, height = 1024;
+        if (aspectRatio === "16:9") { width = 1024; height = 576; }
+        else if (aspectRatio === "9:16") { width = 576; height = 1024; }
+        return `https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true&seed=${Math.random()}&width=${width}&height=${height}`;
       }
     }
 
