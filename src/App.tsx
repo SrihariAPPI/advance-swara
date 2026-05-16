@@ -511,7 +511,12 @@ export default function App() {
       
       {showPermissionModal && (
         <PermissionModal 
-          onClose={() => setShowPermissionModal(false)}
+          onClose={() => {
+            setShowPermissionModal(false);
+            if (permissionError.includes("API_KEY") || permissionError.includes("API key")) {
+              setShowVoiceSettings(true);
+            }
+          }}
           errorMessage={permissionError}
         />
       )}
@@ -656,14 +661,6 @@ export default function App() {
           <h1 className="text-xl md:text-2xl font-cute font-bold text-marigold tracking-tight drop-shadow-md group-hover:scale-105 transition-transform duration-300">Swara</h1>
         </motion.div>
         <div className="flex items-center gap-1 sm:gap-2">
-          <button
-            onClick={() => window.open('https://advance-swara.vercel.app/', '_blank')}
-            className="flex items-center gap-1 sm:gap-1.5 px-3 py-1.5 md:py-2 md:px-4 rounded-full glass hover:bg-cream/10 border-marigold/20 text-marigold transition-all font-medium text-xs md:text-sm shadow-sm"
-            title="Open Advance Swara"
-          >
-            Advance Swara
-            <ExternalLink size={14} className="md:w-4 md:h-4 opacity-80" />
-          </button>
           <Auth />
           <button
             onClick={() => setShowEmbedWidget(true)}

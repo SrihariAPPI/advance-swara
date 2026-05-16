@@ -1,6 +1,6 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 
-const getEnv = (name: string) => {
+export const getEnv = (name: string) => {
   if (typeof window !== 'undefined') {
     const localVal = window.localStorage.getItem(`swara_key_${name}`);
     if (localVal) return localVal;

@@ -1,6 +1,6 @@
 import { GoogleGenAI, LiveServerMessage, Modality, Type } from "@google/genai";
 import { processCommand } from "./commandService";
-import { getSystemInstruction } from "./geminiService";
+import { getSystemInstruction, getEnv } from "./geminiService";
 
 export class LiveSessionManager {
   private ai: GoogleGenAI | null = null;
@@ -32,7 +32,7 @@ export class LiveSessionManager {
     try {
       this.onStateChange("processing");
       
-      const apiKey = process.env.GEMINI_API_KEY;
+      const apiKey = getEnv("GEMINI_API_KEY") || getEnv("VITE_GEMINI_API_KEY");
       if (!apiKey) {
         throw new Error("GEMINI_API_KEY is not configured. Please add it in Settings.");
       }
