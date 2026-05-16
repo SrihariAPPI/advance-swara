@@ -353,9 +353,15 @@ export async function generateSwaraImage(prompt: string, aiModel: string = "imag
           return `data:image/png;base64,${imageBytes}`;
         }
       } catch (err: any) {
-        console.error("Gemini Imagen API failed:", err);
+        const errDetails = err?.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
+        
+        if (errDetails.includes("PERMISSION_DENIED") || errDetails.includes("403") || errDetails.includes("denied access")) {
+          console.log("Imagen not enabled on this API key. Falling back to alternative generator.");
+        } else {
+          console.warn("Gemini Imagen API failed:", errDetails);
+        }
         // Throw if it's a quota error so caller can display it
-        if (err.message?.includes("quota") || err.message?.includes("429")) throw err;
+        if (errDetails.includes("quota") || errDetails.includes("429")) throw err;
         
         // Fallback to pollinations.ai for general failures
         const encodedPrompt = encodeURIComponent(prompt);
@@ -387,8 +393,14 @@ export async function generateSwaraImage(prompt: string, aiModel: string = "imag
           }
         }
       } catch (err: any) {
-        console.error("Gemini Image Content API failed:", err);
-        if (err.message?.includes("quota") || err.message?.includes("429")) throw err;
+        const errDetails = err?.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
+        
+        if (errDetails.includes("PERMISSION_DENIED") || errDetails.includes("403") || errDetails.includes("denied access")) {
+          console.log("Image generation not enabled on this API key. Falling back to alternative generator.");
+        } else {
+          console.warn("Gemini Image Content API failed:", errDetails);
+        }
+        if (errDetails.includes("quota") || errDetails.includes("429")) throw err;
         
         const encodedPrompt = encodeURIComponent(prompt);
         return `https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true&seed=${Math.random()}`;
